@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Earth Analog Explorer</title>
+  <meta name="description" content="Compare places on Earth with conditions on Mars and the lunar south pole. NASA Space Apps 2026 — Earth Analog challenge.">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-theme="earth">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand__logo" aria-hidden="true"></span>
+      <div>
+        <h1 class="brand__title">Earth Analog Explorer</h1>
+        <p class="brand__subtitle">NASA Space Apps 2026 · Earth Analog</p>
+      </div>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Map selection">
+      <button class="tab" role="tab" data-view="earth" aria-selected="true">Earth</button>
+      <button class="tab" role="tab" data-view="mars" aria-selected="false">Mars</button>
+      <button class="tab" role="tab" data-view="moon" aria-selected="false">Moon</button>
+      <button class="tab tab--compare" role="tab" data-view="compare" aria-selected="false">Compare</button>
+    </nav>
+  </header>
+
+  <div id="status" class="status" hidden></div>
+
+  <main class="layout">
+    <section class="workspace">
+      <!-- Compare sub-toggle (visible only in Compare mode) -->
+      <div class="compare-bar" id="compare-bar" hidden>
+        <span class="compare-bar__label">Earth vs</span>
+        <div class="segmented" role="group" aria-label="Compare target">
+          <button class="segmented__btn" data-target="mars" aria-pressed="true">Mars</button>
+          <button class="segmented__btn" data-target="moon" aria-pressed="false">Moon</button>
+        </div>
+      </div>
+
+      <!-- Single-map view: one pane per body, only the active one is visible -->
+      <div class="maps maps--single" id="single-view">
+        <div class="map-pane" data-theme="earth" data-body="earth"><div class="map" id="map-earth"></div></div>
+        <div class="map-pane" data-theme="mars"  data-body="mars"  hidden><div class="map" id="map-mars"></div></div>
+        <div class="map-pane" data-theme="moon"  data-body="moon"  hidden><div class="map" id="map-moon"></div></div>
+      </div>
+
+      <!-- Compare view: Earth | target -->
+      <div class="maps maps--compare" id="compare-view" hidden>
+        <div class="map-pane" data-theme="earth" data-body="earth">
+          <span class="map-pane__label">Earth</span>
+          <div class="map" id="map-compare-earth"></div>
+        </div>
+        <div class="map-pane" data-theme="mars" data-body="mars" id="compare-target-pane">
+          <span class="map-pane__label" id="compare-target-label">Mars</span>
+          <div class="map" id="map-compare-target"></div>
+        </div>
+      </div>
+
+      <!-- Comparison charts placeholder -->
+      <section class="panel charts" id="charts" aria-label="Comparison charts">
+        <h2 class="panel__title">Comparison charts</h2>
+        <div class="charts__body">
+          <p class="placeholder">Comparison charts coming soon</p>
+        </div>
+      </section>
+    </section>
+
+    <aside class="sidebar" id="sidebar" aria-label="Site details">
+      <button class="sidebar__close" id="sidebar-close" aria-label="Close details">×</button>
+      <div class="sidebar__content" id="sidebar-content">
+        <div class="sidebar__empty">
+          <p>Click a marker on the map to see site details.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="app-footer">
+    <span>Test data is approximate. Basemaps: OpenStreetMap, NASA Mars Trek, NASA Moon Trek.</span>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
