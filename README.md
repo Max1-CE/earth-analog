@@ -19,9 +19,10 @@ python -m http.server 8000
 ## Structure
 
 ```
-index.html            layout: header + tabs, map panes, Analysis view, sidebar
+index.html            layout: header + tabs (Globe · Map view · Analysis), globe stage, map panes, Analysis view, sidebar
 css/style.css         themes ([data-theme="earth|mars|moon"]), layout, responsive rules
 js/app.js             state, view switching, theme, sidebar, Analysis view wiring, URL hash
+js/globe.js           home screen: globe.gl globes, focus / compare / back animation, stars, WebGL check
 js/maps.js            BODY_MAPS config (CRS, tiles), MapView class, markers, grid fallback
 js/data.js            CSV loading; PARAMS, CRITERIA, SCENARIOS (mirror of metrics.py), status badges
 js/scores.js          ScoreBook: queries over scores.csv / ranking.csv; per-criterion breakdown
@@ -32,6 +33,7 @@ data/scores.csv       similarity of every analog with every reference (generated
 data/ranking.csv      analogs ranked per reference (generated)
 data/limits.json      team file "Limits of the analogy" (factors, mitigations with criteria links, good_at, conclusion)
 docs/limits_mars.pdf, docs/limits_moon.pdf   Ukrainian originals of the limits documents
+assets/textures/      globe textures (earth, mars, moon; sources in TODO.md)
 analysis/metrics.py   computes scores.csv and ranking.csv from sites.csv
 analysis/CHANGES.md   what the data contains and what is still unverified
 TODO.md               data errors / contradictions found, to be fixed by the team
@@ -60,7 +62,13 @@ python analysis/metrics.py   # rewrites data/scores.csv and data/ranking.csv
 | Moon projection default | `state.moonProjection` in `js/app.js`, or URL `#view=moon&proj=global` |
 | Change colors | theme blocks at the top of `css/style.css` |
 | Limits / mitigations texts | `data/limits.json` (team file: `mitigations[].addresses` → `factors[].id`, `mitigations[].criteria` → s_* criteria, `unmapped_criteria`); Analysis card `renderLimits()`, sidebar `gapSection()` (criteria with s < `MITIGATION_THRESHOLD` = 0.5) in `js/app.js` |
+| Globe colours | `--space-1`, `--space-2` (background), `--accent-earth`, `--accent-mars`, `--accent-moon` in the SPACE INFOGRAPHIC block of `css/style.css`; marker / glow colours: `MARKER_COLORS`, `ATMOSPHERE` in `js/globe.js` |
+| Globe fonts | `--font-serif` (headlines), `--font-label` (small caps); Google Fonts link in `index.html` |
+| Animation timing | CSS: `--t-accent` (colour, 0.6 s), `--t-slot` (Earth → target, 1.5 s), `--t-card` (card, 0.6 s); JS: `TIMING` (camera flight 1.2 s, compare 1.5 s, rotation speed) and `ALTITUDE` (camera distance) in `js/globe.js`. With prefers-reduced-motion everything switches instantly |
+| Globe textures | `TEXTURES` in `js/globe.js` (falls back to a plain sphere if a file is missing) |
+| Globe deep links | `#view=globe&focus=<site_id>` (card open), `&g=compare` (comparison) |
 | Sidebar content | `renderSidebar()` and helpers in `js/app.js` |
 
 Screenshot tests: headless Chrome with `--force-prefers-reduced-motion` (charts and CSS
-transitions then render without animation).
+transitions then render without animation); globes need `--use-angle=swiftshader --enable-unsafe-swiftshader`.
+Without WebGL the site opens on the Leaflet maps and hides the Globe tab.

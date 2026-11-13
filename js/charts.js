@@ -107,8 +107,13 @@ function mount(id, canvas, config) {
   return charts[id];
 }
 
-export function destroyAll() {
-  for (const id of Object.keys(charts)) { charts[id].destroy(); delete charts[id]; }
+/** Destroy all charts except the ids in `keep`. */
+export function destroyAll(keep = []) {
+  for (const id of Object.keys(charts)) {
+    if (keep.includes(id)) continue;
+    charts[id].destroy();
+    delete charts[id];
+  }
 }
 
 const scenarioLabel = (key) => SCENARIOS[key]?.label ?? key;
@@ -201,13 +206,23 @@ function valueLabelPlugin(rows, t) {
 /* b) Radar                                                            */
 /* ------------------------------------------------------------------ */
 
-export function radarChart(canvas, { row, analog, reference }) {
+/**
+ * @param {{row, analog, reference, id?: string, compact?: boolean}} opts
+ *   compact: no title, transparent background, smaller labels (radar between the globes)
+ */
+export function radarChart(canvas, { row, analog, reference, id = 'radar', compact = false }) {
   const t = themeColors(canvas);
   const refColor = SERIES[reference.body] ?? t.muted;
   const values = CRITERIA.map((c) => row?.s[c.key] ?? null);
   const base = baseOptions(t, `${analog.name} vs ${reference.name}`,
     row ? `Similarity per criterion (0–1) · total ${fmt(row.score)} · scenario: ${scenarioLabel(row.scenario)}` : 'No score for this pair');
-  return mount('radar', canvas, {
+  if (compact) {
+    base.plugins.title.display = false;
+    base.plugins.subtitle.display = false;
+    base.plugins.eaBackground.color = 'transparent';
+    base.layout = { padding: 4 };
+  }
+  return mount(id, canvas, {
     type: 'radar',
     data: {
       labels: CRITERIA.map((c) => c.label),
@@ -245,7 +260,7 @@ export function radarChart(canvas, { row, analog, reference }) {
           ticks: { stepSize: 0.25, color: t.muted, backdropColor: 'transparent', font: { size: 10, family: t.font } },
           grid: { color: withAlpha('#ffffff', 0.1) },
           angleLines: { color: withAlpha('#ffffff', 0.1) },
-          pointLabels: { color: t.text, font: { size: 12, family: t.font } },
+          pointLabels: { color: t.text, font: { size: compact ? 10 : 12, family: t.font } },
         },
       },
       plugins: {

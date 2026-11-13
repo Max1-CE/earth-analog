@@ -12,11 +12,15 @@ import {
 import { MapView, mapKeyFor, projectionControl } from './maps.js';
 import { ScoreBook, SCENARIO_CHOICES, breakdown, similarityLevel, MATCH_THRESHOLD } from './scores.js';
 import { rankingChart, radarChart, heatmapChart, rawCharts, downloadPng, destroyAll, RAW_GROUPS } from './charts.js';
+import { GlobeStage, hasWebGL } from './globe.js';
 
-const VIEWS = ['earth', 'mars', 'moon', 'compare', 'analysis'];
+const VIEWS = ['globe', 'earth', 'mars', 'moon', 'compare', 'analysis'];
+const MAP_VIEWS = ['earth', 'mars', 'moon', 'compare'];
+const WEBGL = hasWebGL(); // no WebGL (or globe.gl failed to load) → start on the Leaflet maps
 
 const state = {
-  view: 'earth',          // one of VIEWS
+  view: WEBGL ? 'globe' : 'earth', // one of VIEWS
+  lastMapView: 'earth',   // which map the "Map view" tab returns to
   compareTarget: 'mars',  // 'mars' | 'moon'
   moonProjection: 'polar', // 'polar' (south polar stereographic) | 'global' (equirectangular)
   scenario: 'auto',       // 'auto' | key of SCENARIOS
@@ -44,6 +48,7 @@ const byId = (id) => state.sites.find((s) => s.id === id) ?? null;
 function analysisReference() { return byId(state.analysis.referenceId); }
 
 function currentTheme() {
+  if (state.view === 'globe') return globeStage?.mode === 'compare' ? globeStage.targetBody : 'earth';
   if (state.view === 'compare') return state.compareTarget;
   if (state.view === 'analysis') return analysisReference()?.body ?? 'mars';
   return state.view;
@@ -113,7 +118,22 @@ function visibleMaps() {
 function render() {
   applyTheme();
 
-  $$('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.view === state.view)));
+  const tab = state.view === 'globe' ? 'globe' : state.view === 'analysis' ? 'analysis' : 'map';
+  $$('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === tab)));
+  $$('#map-subnav .segmented__btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === state.view)));
+  document.body.dataset.view = state.view;
+  if (MAP_VIEWS.includes(state.view)) state.lastMapView = state.view;
+
+  const isGlobe = state.view === 'globe';
+  $('#globe-view').hidden = !isGlobe;
+  $('main.layout').hidden = isGlobe;
+  if (isGlobe) {
+    destroyAll(['globe-radar']);
+    ensureGlobe();
+    writeHash();
+    return;
+  }
+  globeStage?.pause();
   $$('#compare-bar .segmented__btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.target === state.compareTarget)));
 
   const isCompare = state.view === 'compare';
@@ -126,7 +146,7 @@ function render() {
   if (isAnalysis) {
     renderAnalysis();
   } else {
-    destroyAll(); // charts are rebuilt when the tab is shown again
+    destroyAll(['globe-radar']); // charts are rebuilt when the tab is shown again
     if (isCompare) {
       ensureCompareMaps();
     } else {
@@ -606,6 +626,87 @@ function pngFor(kind) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Globe home screen (js/globe.js)                                     */
+/* ------------------------------------------------------------------ */
+
+let globeStage = null;
+
+/** First 2–3 sentences of a description. */
+function shortText(text, max = 3) {
+  const parts = String(text).match(/[^.!?]+[.!?]+(\s|$)/g) ?? [text];
+  return parts.slice(0, max).join('').trim();
+}
+
+function globeCardHtml(site) {
+  const target = site.analog_of;
+  const ref = byId(site.pairId);
+  const row = ref ? state.book.get(site.id, ref.id, 'auto') : null;
+  const targetName = target === 'moon' ? 'the Moon' : 'Mars';
+  const photo = site.photo
+    ? `<figure class="site-card__photo">
+        <img src="${escapeHtml(site.photo.img)}" alt="${escapeHtml(site.name)}" loading="lazy" decoding="async">
+        <figcaption><a href="${escapeHtml(site.photo.page)}" target="_blank" rel="noopener">${escapeHtml([site.photo.author, site.photo.license].filter(Boolean).join(' · ') || 'Photo source')}</a></figcaption>
+      </figure>`
+    : '';
+  return `
+    <span class="badge badge--${target ?? 'earth'}">Analog of ${target === 'moon' ? 'Moon' : 'Mars'}</span>
+    <h3 class="site-card__title">${escapeHtml(site.name)}</h3>
+    <p class="kicker kicker--small">${escapeHtml(site.region)} · ${formatCoords(site.lat, site.lon, 1)}</p>
+    ${photo}
+    <p class="site-card__text">${escapeHtml(shortText(site.description))}</p>
+    ${row ? `<p class="site-card__sim"><span class="kicker kicker--small">Similarity</span> <strong>${fmtScore(row.score)}</strong>
+        <span>vs ${escapeHtml(ref.name)} · ${escapeHtml(scenarioName(row.scenario))}</span></p>` : ''}
+    <div class="site-card__actions">
+      ${ref ? `<button type="button" class="btn-accent" data-gaction="compare">Compare with ${targetName}</button>` : ''}
+      <button type="button" class="btn-ghost" data-gaction="map">Open in Map view</button>
+    </div>`;
+}
+
+function globeCompare(analog, reference) {
+  const row = state.book.get(analog.id, reference.id, 'auto');
+  $('#globe-target-label').textContent = `${BODIES[reference.body].short} · reference`;
+  radarChart($('#globe-radar'), { row, analog, reference, id: 'globe-radar', compact: true });
+  const bd = row ? breakdown(row) : null;
+  const details = $('#globe-details');
+  details.dataset.theme = reference.body;
+  const level = row ? similarityLevel(row.score)?.label ?? '' : '';
+  details.innerHTML = `
+    <header class="space__details-head">
+      <p class="kicker">Comparison · ${escapeHtml(scenarioName(row?.scenario ?? 'equal'))}</p>
+      <h3 class="display display--small">${escapeHtml(analog.name)} <span class="hl">vs</span> ${escapeHtml(reference.name)}</h3>
+      ${row ? `<p class="lede">Similarity <strong>${fmtScore(row.score)}</strong> (${escapeHtml(level)}). The radar between the globes shows each of the 8 criteria (1 = identical).</p>` : ''}
+    </header>
+    <div class="space__details-grid">
+      <div class="space-panel">${paramsTable(analog, reference).replace('>Parameters<', `>Earth vs ${escapeHtml(BODIES[reference.body].short)}<`)}</div>
+      <div class="space-panel">${bd ? gapSection(analog, reference, row, bd) : ''}</div>
+    </div>`;
+  details.hidden = false;
+  writeHash();
+}
+
+function ensureGlobe() {
+  if (!globeStage) {
+    globeStage = new GlobeStage($('#globe-view'), {
+      analogs: state.sites.filter((s) => s.role === 'analog'),
+      references: references(state.sites),
+      byId,
+      cardHtml: globeCardHtml,
+      onCompare: globeCompare,
+      onBack: (from) => {
+        if (from === 'compare') {
+          $('#globe-details').hidden = true;
+          destroyAll(); // the radar between the globes
+        }
+      },
+      onStateChange: () => { applyTheme(); writeHash(); },
+    });
+  } else {
+    globeStage.resume();
+  }
+  applyTheme();
+}
+
+/* ------------------------------------------------------------------ */
 /* Events & init                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -624,9 +725,26 @@ function setScenario(value) {
 
 function bindEvents() {
   $$('.tab').forEach((t) => t.addEventListener('click', () => {
-    state.view = t.dataset.view;
+    const tab = t.dataset.tab;
+    state.view = tab === 'map' ? state.lastMapView : tab;
     render();
   }));
+  $$('#map-subnav .segmented__btn').forEach((b) => b.addEventListener('click', () => {
+    state.view = b.dataset.view;
+    render();
+  }));
+  $('#globe-back').addEventListener('click', () => globeStage?.back());
+  $('#globe-card').addEventListener('click', (e) => {
+    const a = e.target.closest('[data-gaction]');
+    if (!a || !globeStage?.focused) return;
+    const site = globeStage.focused;
+    if (a.dataset.gaction === 'compare') globeStage.compare(byId(site.pairId));
+    if (a.dataset.gaction === 'map') {
+      state.view = 'earth';
+      render();
+      selectSite(site);
+    }
+  });
   $$('#compare-bar .segmented__btn').forEach((b) => b.addEventListener('click', () => {
     state.compareTarget = b.dataset.target;
     render();
@@ -673,6 +791,7 @@ function bindEvents() {
   let resizeTimer;
   window.addEventListener('resize', () => {
     visibleMaps().forEach((m) => m.invalidate());
+    if (state.view === 'globe') globeStage?.resize();
     if (state.view === 'analysis') { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAnalysis, 200); }
   });
 }
@@ -686,12 +805,13 @@ function bindEvents() {
 function readHash() {
   const h = new URLSearchParams(location.hash.slice(1));
   if (VIEWS.includes(h.get('view'))) state.view = h.get('view');
+  if (state.view === 'globe' && !WEBGL) state.view = 'earth'; // no WebGL → Leaflet maps
   if (['mars', 'moon'].includes(h.get('target'))) state.compareTarget = h.get('target');
   if (['polar', 'global'].includes(h.get('proj'))) state.moonProjection = h.get('proj');
   if (SCENARIO_CHOICES.some((c) => c.key === h.get('scn'))) state.scenario = h.get('scn');
   state.analysis.referenceId = h.get('ref');
   state.analysis.analogId = h.get('analog');
-  return { site: h.get('site'), popup: h.get('popup') };
+  return { site: h.get('site'), popup: h.get('popup'), focus: h.get('focus'), globeMode: h.get('g') };
 }
 
 function writeHash() {
@@ -703,8 +823,12 @@ function writeHash() {
     if (state.analysis.referenceId) h.set('ref', state.analysis.referenceId);
     if (state.analysis.analogId) h.set('analog', state.analysis.analogId);
   }
+  if (state.view === 'globe' && globeStage?.focused) {
+    h.set('focus', globeStage.focused.id);
+    if (globeStage.mode === 'compare') h.set('g', 'compare');
+  }
   if (state.scenario !== 'auto') h.set('scn', state.scenario);
-  if (state.selected) h.set('site', state.selected.id);
+  if (state.selected && state.view !== 'globe') h.set('site', state.selected.id);
   history.replaceState(null, '', `#${h}`);
 }
 
@@ -728,10 +852,18 @@ async function init() {
       ? 'Could not load the CSV files from a local file. Serve the folder over HTTP, e.g. <code>python -m http.server 8000</code>, then open <code>http://localhost:8000</code>.'
       : `Could not load site data: ${escapeHtml(err.message || err)}`);
   }
-  const { site: siteId, popup: popupId } = readHash();
+  const { site: siteId, popup: popupId, focus: focusId, globeMode } = readHash();
+  if (!WEBGL) $('.tab[data-tab="globe"]').hidden = true;
   render();
   const site = siteId && byId(siteId);
   if (site) selectSite(site);
+
+  // #view=globe&focus=<site_id>[&g=compare]: restore the globe state (links, screenshot tests)
+  const focusSite = state.view === 'globe' && focusId && byId(focusId);
+  if (focusSite && globeStage) {
+    globeStage.focus(focusSite, { instant: true });
+    if (globeMode === 'compare') setTimeout(() => globeStage.compare(byId(focusSite.pairId), { instant: true }), 300);
+  }
 
   // #popup=<site_id>: open that site's mini-window (after the initial fit has settled)
   const popupSite = popupId && byId(popupId);

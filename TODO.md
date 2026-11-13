@@ -69,6 +69,22 @@
 - `low_pressure_chamber` (Марс) пов'язано з критеріями температури, хоча в PDF це метод для тиску й складу атмосфери.
   Сам `limits.json` прямо каже, що цей зв'язок додала команда.
 
+## 5b. Головний екран із глобусами (2026-11-13)
+
+**Текстури** (`assets/textures/`, 2048×1024, рівнокутна проєкція):
+
+| файл | джерело | ліцензія |
+|---|---|---|
+| `earth.jpg` | NASA Visible Earth 57752 «Blue Marble: Land Surface, Shallow Water, and Shaded Topography» (Reto Stöckli / NASA GSFC, MODIS, USGS EROS); оригінал 21600×10800 узято з Wikimedia Commons `File:Land_shallow_topo_2048.jpg`, зменшено | public domain |
+| `moon.jpg` | NASA SVS «CGI Moon Kit» (ID 4720), `lroc_color_poles_2k.tif`: кольорова мозаїка LRO LROC WAC; конвертовано в JPEG | NASA, без обмежень; SVS просить вказувати «NASA's Scientific Visualization Studio» |
+| `mars.jpg` | Viking MDIM 2.1 colour mosaic (NASA/JPL/USGS), склеєно з 8×4 тайлів NASA Mars Trek (рівень 2), тих самих, що й на карті | public domain |
+
+Питання:
+- Чи потрібен на сайті окремий рядок «Globe textures: NASA Visible Earth, NASA SVS CGI Moon Kit, Viking MDIM 2.1 via Mars Trek»? Зараз джерела вказані лише тут.
+- «Similarity» у картці на глобусі — це оцінка проти **задуманого еталона** (`pair_id`) у сценарії Auto, тобто як у `ranking.csv`. Якщо в презентації треба показувати найкращий еталон, а не задуманий, скажіть.
+- На глобусі Землі точки DEV-HAU, DEV-PLT і ELL-FOS близькі одна до одної, і на загальному виді їх важко розрізнити. Можна відкривати картку з наближенням або групувати точки.
+- Продуктивність на телефонах перевірено лише в емуляції ширини (headless Chrome, програмний WebGL). На справжньому телефоні ще не тестували.
+
 ## 6. Бракує
 
 - ~~`docs/limits_*.pdf`~~ — отримано (`docs/`); `data/limits.json` — командна версія.

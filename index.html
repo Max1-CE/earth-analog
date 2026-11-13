@@ -6,9 +6,12 @@
   <title>Earth Analog Explorer</title>
   <meta name="description" content="Compare places on Earth with conditions on Mars and the lunar south pole. NASA Space Apps 2026 — Earth Analog challenge.">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-theme="earth">
+<body data-theme="earth" data-view="globe">
   <header class="app-header">
     <div class="brand">
       <span class="brand__logo" aria-hidden="true"></span>
@@ -18,19 +21,61 @@
       </div>
     </div>
 
-    <nav class="tabs" role="tablist" aria-label="Map selection">
-      <button class="tab" role="tab" data-view="earth" aria-selected="true">Earth</button>
-      <button class="tab" role="tab" data-view="mars" aria-selected="false">Mars</button>
-      <button class="tab" role="tab" data-view="moon" aria-selected="false">Moon</button>
-      <button class="tab tab--compare" role="tab" data-view="compare" aria-selected="false">Compare</button>
-      <button class="tab" role="tab" data-view="analysis" aria-selected="false">Analysis</button>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="globe" aria-selected="true">Globe</button>
+      <button class="tab" role="tab" data-tab="map" aria-selected="false">Map view</button>
+      <button class="tab" role="tab" data-tab="analysis" aria-selected="false">Analysis</button>
     </nav>
   </header>
 
   <div id="status" class="status" hidden></div>
 
+  <!-- Home: space infographic with 3D globes (js/globe.js) -->
+  <section class="space" id="globe-view" data-body="earth" aria-label="Explore Earth analogs on a globe" hidden>
+    <canvas class="space__stars" aria-hidden="true"></canvas>
+    <div class="space__intro">
+      <p class="kicker">Earth Analog · NASA Space Apps · 2026</p>
+      <h2 class="display">Where on <em class="hl hl--earth">Earth</em> is most like <em class="hl hl--mars">Mars</em> or <em class="hl hl--moon">the Moon</em>?</h2>
+      <p class="lede">Each glowing point is a place on Earth used to rehearse missions to another world. Click one to see how close it really is.</p>
+      <ul class="space__legend">
+        <li><span class="dot dot--mars"></span>Mars analog</li>
+        <li><span class="dot dot--moon"></span>Moon analog</li>
+      </ul>
+    </div>
+
+    <div class="space__stage" id="globe-stage" data-mode="idle">
+      <div class="globe-slot globe-slot--earth" id="globe-earth">
+        <div class="frame" aria-hidden="true"></div>
+        <span class="slot-label">Earth · analog</span>
+        <div class="globe-canvas"></div>
+      </div>
+      <div class="globe-slot globe-slot--target" id="globe-target" aria-hidden="true">
+        <div class="frame" aria-hidden="true"></div>
+        <span class="slot-label" id="globe-target-label">Reference</span>
+        <div class="globe-canvas"></div>
+      </div>
+      <div class="space__radar" id="globe-radar-wrap">
+        <p class="kicker kicker--small">Similarity by criterion</p>
+        <div class="space__radar-box"><canvas id="globe-radar" role="img" aria-label="Radar of the 8 similarity criteria"></canvas></div>
+      </div>
+      <aside class="site-card" id="globe-card" aria-live="polite" hidden></aside>
+      <button type="button" class="btn-back" id="globe-back">← Back</button>
+      <p class="space__hint" id="globe-hint">Drag to rotate · click a glowing point</p>
+    </div>
+
+    <div class="space__details" id="globe-details" hidden></div>
+  </section>
+
   <main class="layout">
     <section class="workspace">
+      <!-- Map view sub-navigation -->
+      <nav class="map-subnav segmented" id="map-subnav" aria-label="Map selection">
+        <button class="segmented__btn" data-view="earth" aria-pressed="true">Earth</button>
+        <button class="segmented__btn" data-view="mars" aria-pressed="false">Mars</button>
+        <button class="segmented__btn" data-view="moon" aria-pressed="false">Moon</button>
+        <button class="segmented__btn" data-view="compare" aria-pressed="false">Compare</button>
+      </nav>
+
       <!-- Compare sub-toggle (visible only in Compare mode) -->
       <div class="compare-bar" id="compare-bar" hidden>
         <span class="compare-bar__label">Earth vs</span>
@@ -146,6 +191,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.46.2/dist/globe.gl.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
