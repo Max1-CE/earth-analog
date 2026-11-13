@@ -23,6 +23,7 @@
       <button class="tab" role="tab" data-view="mars" aria-selected="false">Mars</button>
       <button class="tab" role="tab" data-view="moon" aria-selected="false">Moon</button>
       <button class="tab tab--compare" role="tab" data-view="compare" aria-selected="false">Compare</button>
+      <button class="tab" role="tab" data-view="analysis" aria-selected="false">Analysis</button>
     </nav>
   </header>
 
@@ -58,11 +59,61 @@
         </div>
       </div>
 
-      <!-- Comparison charts placeholder -->
-      <section class="panel charts" id="charts" aria-label="Comparison charts">
-        <h2 class="panel__title">Comparison charts</h2>
-        <div class="charts__body">
-          <p class="placeholder">Comparison charts coming soon</p>
+      <!-- Analysis view: charts from scores.csv / ranking.csv (js/charts.js) -->
+      <section class="analysis" id="analysis-view" aria-label="Analysis" hidden>
+        <div class="analysis__toolbar">
+          <label class="field">
+            <span class="field__label">Weighting scenario</span>
+            <select id="ctl-scenario"></select>
+          </label>
+          <label class="field">
+            <span class="field__label">Reference (Mars / Moon)</span>
+            <select id="ctl-reference"></select>
+          </label>
+          <label class="field">
+            <span class="field__label">Earth analog</span>
+            <select id="ctl-analog"></select>
+          </label>
+        </div>
+        <p class="analysis__note" id="analysis-note"></p>
+
+        <div class="analysis__grid">
+          <article class="chart-card" id="card-ranking">
+            <header class="chart-card__head">
+              <h2 class="chart-card__title">Ranking</h2>
+              <button type="button" class="btn" data-png="ranking">Download PNG</button>
+            </header>
+            <div class="chart-card__body"><canvas id="chart-ranking" role="img" aria-label="Ranking of Earth analogs for the selected reference"></canvas></div>
+          </article>
+
+          <article class="chart-card" id="card-radar">
+            <header class="chart-card__head">
+              <h2 class="chart-card__title">Analog vs reference</h2>
+              <button type="button" class="btn" data-png="radar">Download PNG</button>
+            </header>
+            <div class="chart-card__body chart-card__body--radar"><canvas id="chart-radar" role="img" aria-label="Radar chart of the 8 similarity criteria"></canvas></div>
+          </article>
+
+          <article class="chart-card chart-card--wide" id="card-heatmap">
+            <header class="chart-card__head">
+              <h2 class="chart-card__title">Heat map: all analogs × all references</h2>
+              <button type="button" class="btn" data-png="heatmap">Download PNG</button>
+            </header>
+            <div class="chart-card__body"><canvas id="chart-heatmap" role="img" aria-label="Heat map of similarity scores"></canvas></div>
+          </article>
+
+          <article class="chart-card chart-card--wide" id="card-raw">
+            <header class="chart-card__head">
+              <h2 class="chart-card__title">Raw parameters</h2>
+              <button type="button" class="btn" data-png="raw">Download PNG</button>
+            </header>
+            <div class="raw-grid">
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-temp" role="img" aria-label="Surface temperature"></canvas></div>
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-sun" role="img" aria-label="Solar elevation"></canvas></div>
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-slope" role="img" aria-label="Mean slope"></canvas></div>
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-relief" role="img" aria-label="Relief"></canvas></div>
+            </div>
+          </article>
         </div>
       </section>
     </section>
@@ -78,13 +129,15 @@
   </main>
 
   <footer class="app-footer">
-    <span>Test data is approximate. Basemaps: OpenStreetMap, NASA Mars Trek, NASA Moon Trek.</span>
+    <span>Grey-marked values are placeholders, not yet verified. Basemaps: OpenStreetMap, NASA Mars Trek, NASA Moon Trek. Charts: Chart.js.</span>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

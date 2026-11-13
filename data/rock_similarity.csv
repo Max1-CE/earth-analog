@@ -1,0 +1,9 @@
+rock_class,anorthosite,basalt,impact_melt_breccia,sedimentary_clastic,carbonate,crystalline_felsic,glacial_till,evaporite
+anorthosite,1,0,0.5,0,0,0.5,0,0
+basalt,0,1,0.5,0,0,0,0.5,0
+impact_melt_breccia,0.5,0.5,1,0,0,0,0,0
+sedimentary_clastic,0,0,0,1,0.5,0,0.5,0.5
+carbonate,0,0,0,0.5,1,0,0,0.5
+crystalline_felsic,0.5,0,0,0,0,1,0.5,0
+glacial_till,0,0.5,0,0.5,0,0.5,1,0
+evaporite,0,0,0,0.5,0.5,0,0,1

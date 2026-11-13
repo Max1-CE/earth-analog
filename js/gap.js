@@ -4,7 +4,8 @@
  * For every mismatching parameter we know whether the Earth analog is too
  * HIGH or too LOW compared with the target, and look up advice in GAP_RULES.
  *
- * GAP_RULES[paramKey][direction] = {
+ * GAP_RULES[criterionKey][direction] = {   (criterion keys: CRITERIA in data.js;
+ *                                       direction 'differs' when it has no sign, e.g. rock)
  *   summary:  short phrase shown as the card title suffix,
  *   closable: 'yes' | 'partly' | 'no'   (can fieldwork on Earth fix it?),
  *   tips:     Tip[]                     (shared by Mars and Moon)
@@ -12,8 +13,8 @@
  * }
  * Tip = { kind: 'site' | 'season' | 'equipment' | 'lab' | 'analysis', text }
  *
- * To add advice: append a Tip. To add a parameter: add a key matching
- * PARAMS[].key in data.js. Missing rules fall back to a generic tip.
+ * To add advice: append a Tip. To add a criterion: add a key matching
+ * CRITERIA[].key in data.js. Missing rules fall back to a generic tip.
  * TODO: review texts with the team / domain experts; add references.
  */
 
@@ -32,7 +33,7 @@ export const CLOSABLE_LABELS = {
 };
 
 export const GAP_RULES = {
-  surface_temp_mean_c: {
+  temp_mean: {
     higher: {
       summary: 'too warm',
       closable: 'partly',
@@ -53,7 +54,7 @@ export const GAP_RULES = {
     },
   },
 
-  surface_temp_range_c: {
+  temp_range: {
     lower: {
       summary: 'temperature swing too small',
       closable: 'partly',
@@ -71,7 +72,7 @@ export const GAP_RULES = {
     },
   },
 
-  crater_density: {
+  craters: {
     lower: {
       summary: 'too few craters',
       closable: 'partly',
@@ -90,7 +91,7 @@ export const GAP_RULES = {
     },
   },
 
-  median_slope_deg: {
+  slope: {
     lower: {
       summary: 'terrain too flat',
       closable: 'yes',
@@ -108,31 +109,31 @@ export const GAP_RULES = {
     },
   },
 
-  precip_log: {
-    higher: {
-      summary: 'too wet',
+  relief: {
+    lower: {
+      summary: 'relief too low',
       closable: 'partly',
       tips: [
-        { kind: 'season', text: 'Run the campaign in the driest season and avoid post-rain days.' },
-        { kind: 'equipment', text: 'Store samples sealed and desiccated; protect instruments from moisture.' },
-        { kind: 'analysis', text: 'Flag aqueous alteration and biology — they have no present-day counterpart at the target.' },
+        { kind: 'site', text: 'Add a sub-site with larger local relief: crater rims, escarpments, valley walls.' },
+        { kind: 'analysis', text: 'Line-of-sight, communications and illumination results depend on relief — check before transferring them.' },
       ],
-      mars: [
-        { kind: 'site', text: 'Hyper-arid cores (Atacama, Dry Valleys) get closest to Mars dryness.' },
+      moon: [
+        { kind: 'analysis', text: 'Massifs like Malapert rise ~5 km; no analog site matches that scale, so treat long-range shadowing as not reproduced.' },
       ],
     },
-    lower: {
-      summary: 'too dry',
+    higher: {
+      summary: 'relief too high',
       closable: 'yes',
       tips: [
-        { kind: 'analysis', text: 'Rare case — check the data; the target should not be wetter than Earth.' },
+        { kind: 'site', text: 'Restrict traverses to the flatter part of the site.' },
       ],
     },
   },
 
-  soil_match: {
-    lower: {
-      summary: 'soil differs from regolith',
+  rock: {
+    // Rock type has no direction: the same advice is used whenever it differs.
+    differs: {
+      summary: 'rock type differs',
       closable: 'partly',
       tips: [
         { kind: 'site', text: 'Sample a sub-site with closer mineralogy and grain size.' },
@@ -146,16 +147,9 @@ export const GAP_RULES = {
         { kind: 'site', text: 'Anorthosite outcrops (e.g. Mistastin) best match lunar highland rock.' },
       ],
     },
-    higher: {
-      summary: 'soil match higher than target',
-      closable: 'yes',
-      tips: [
-        { kind: 'analysis', text: 'Check the data: soil_match for target sites should be 1.' },
-      ],
-    },
   },
 
-  sun_max_elev_deg: {
+  sun: {
     higher: {
       summary: 'Sun too high',
       closable: 'partly',
@@ -179,7 +173,7 @@ export const GAP_RULES = {
     },
   },
 
-  ground_ice: {
+  ice: {
     lower: {
       summary: 'not enough ground ice',
       closable: 'partly',
@@ -206,15 +200,17 @@ const GENERIC = {
 
 /**
  * Advice for one mismatching parameter.
- * @param {string} paramKey
+ * @param {string} paramKey   criterion key (CRITERIA[].key)
  * @param {number} earthValue   value at the Earth analog
  * @param {number} targetValue  value at the Mars / Moon site
  * @param {'mars'|'moon'} body
- * @returns {{direction:'higher'|'lower', summary:string, closable:string, tips:{kind:string,text:string}[]}}
+ * @returns {{direction:'higher'|'lower'|'differs', summary:string, closable:string, tips:{kind:string,text:string}[]}}
  */
 export function gapAdvice(paramKey, earthValue, targetValue, body) {
-  const direction = earthValue > targetValue ? 'higher' : 'lower';
-  const rule = GAP_RULES[paramKey]?.[direction] ?? GENERIC;
+  const rules = GAP_RULES[paramKey];
+  const direction = rules?.differs || earthValue === null || targetValue === null ? 'differs'
+    : earthValue > targetValue ? 'higher' : 'lower';
+  const rule = rules?.[direction] ?? GENERIC;
   return {
     direction,
     summary: rule.summary,
