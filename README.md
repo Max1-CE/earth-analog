@@ -34,6 +34,9 @@ data/sites.csv      sites (approximate test values)
 | Task | File |
 |---|---|
 | Add a site | `data/sites.csv` |
+| Popup text / photo | `region`, `description`, `photo_url`, `photo_credit`, `photo_license`, `photo_page` columns in `data/sites.csv` (photos: Earth only, free licence; `TODO:` notes in `description` are hidden from visitors) |
+| Coordinates checked? | `coords_verified` (`yes`/`no`) + where they came from in `source`; `no` shows "≈ approx." in the UI |
+| Popup layout | `sitePopup()` in `js/app.js`, `.popup*` / `.site-popup` in `css/style.css`; open one via URL `#view=earth&popup=<site name>` |
 | Add a parameter | new CSV column + entry in `PARAMS` (`js/data.js`) + weight in `WEIGHTS` |
 | Change basemap | `BODY_MAPS[key].tiles` in `js/maps.js` (`moon` = south polar, `moonGlobal` = equirectangular) |
 | Moon projection default | `state.moonProjection` in `js/app.js` (`'polar'` / `'global'`), or URL `#view=moon&proj=global` |

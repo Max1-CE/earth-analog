@@ -315,16 +315,77 @@ h1, h2, h3 { margin: 0; }
 .site-head__name { font-size: 1.3rem; margin-top: 8px; padding-right: 36px; }
 .site-head__coords { color: var(--c-muted); font-size: 0.88rem; margin-top: 4px; font-variant-numeric: tabular-nums; }
 
-.photo {
-  aspect-ratio: 16 / 9;
+.site-head__region { color: var(--c-text); font-size: 0.88rem; margin-top: 4px; }
+.approx { color: var(--c-accent-2); font-size: 0.78rem; white-space: nowrap; }
+.site-desc { margin: 0; font-size: 0.9rem; line-height: 1.5; }
+
+/* Photo block (sidebar .photo, popup .popup__photo) */
+.photo, .popup__photo { margin: 0; }
+.photo img, .popup__photo img, .photo-missing {
+  display: block; width: 100%;
+  object-fit: cover;
   border-radius: 8px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+}
+.photo img, .photo > .photo-missing { aspect-ratio: 16 / 9; height: auto; }
+.popup__photo img, .popup__photo > .photo-missing { height: 130px; }
+.photo figcaption, .popup__photo figcaption {
+  margin-top: 4px; font-size: 0.7rem; line-height: 1.3; color: var(--c-muted);
+}
+.photo figcaption a, .popup__photo figcaption a { color: inherit; }
+.photo--empty, .popup__photo--empty, .photo-missing {
   display: grid; place-items: center;
+  border-radius: 8px;
   color: var(--c-muted); font-size: 0.85rem;
   background:
     repeating-linear-gradient(45deg, transparent 0 10px, color-mix(in srgb, var(--c-border) 50%, transparent) 10px 11px),
     linear-gradient(135deg, var(--c-surface-2), var(--c-bg));
   border: 1px solid var(--c-border);
 }
+.photo--empty { aspect-ratio: 16 / 9; }
+.popup__photo--empty { height: 130px; }
+
+/* ---------- Marker popup (mini-window) ----------
+   The popup lives inside .map-pane[data-theme], so it inherits that map's palette. */
+.site-popup .leaflet-popup-content-wrapper {
+  background: var(--c-surface);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.site-popup .leaflet-popup-tip { background: var(--c-surface); border: 1px solid var(--c-border); }
+.site-popup .leaflet-popup-content { margin: 12px 14px; font: inherit; font-family: var(--font); }
+.site-popup a.leaflet-popup-close-button { color: var(--c-muted); top: 4px; right: 4px; }
+.site-popup a.leaflet-popup-close-button:hover { color: var(--c-text); }
+
+.popup { display: flex; flex-direction: column; gap: 8px; max-height: var(--popup-max, 70vh); }
+.popup__body {
+  display: flex; flex-direction: column; gap: 8px;
+  min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+}
+.popup__foot { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.popup__head { flex: none; }
+.popup__photo img, .popup__photo > .photo-missing, .popup__photo--empty { flex: none; }
+.popup p { margin: 0; }
+.popup__name { margin: 0; padding-right: 18px; font-size: 1rem; line-height: 1.25; }
+.popup__region { margin-top: 2px !important; color: var(--c-muted); font-size: 0.78rem; }
+.popup__desc { font-size: 0.82rem; line-height: 1.45; }
+.popup__analog {
+  font-size: 0.8rem; padding: 4px 8px; border-radius: 6px;
+  background: var(--c-surface-2); border-left: 3px solid var(--c-accent);
+}
+.popup__analog strong { color: var(--c-accent); }
+.popup__coords { font-size: 0.75rem; color: var(--c-muted); font-variant-numeric: tabular-nums; }
+.popup__btn {
+  align-self: stretch;
+  padding: 8px 12px; border-radius: 8px; border: 0; cursor: pointer;
+  background: var(--c-primary); color: var(--c-on-primary);
+  font: inherit; font-size: 0.85rem; font-weight: 700;
+}
+.popup__btn:hover { filter: brightness(1.12); }
+.popup__btn:focus-visible { outline: 2px solid var(--c-accent-2); outline-offset: 2px; }
 
 .index-card {
   display: flex; flex-direction: column; gap: 8px;
@@ -488,6 +549,14 @@ h1, h2, h3 { margin: 0; }
   .app-footer { padding: 8px 16px 12px; }
 }
 
+@media (max-width: 820px) {
+  /* Compact popup on phones: shorter photo and text so it fits a 55vh map */
+  .site-popup .leaflet-popup-content { margin: 10px 12px; width: min(260px, calc(100vw - 72px)) !important; }
+  .popup { gap: 6px; }
+  .popup__photo img, .popup__photo > .photo-missing, .popup__photo--empty { height: 96px; }
+  .popup__desc { font-size: 0.78rem; }
+}
+
 @media (max-width: 420px) {
   .brand__subtitle { display: none; }
   .match-grid { grid-template-columns: 1fr; }
@@ -496,3 +565,7 @@ h1, h2, h3 { margin: 0; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }
+
+/* Hide the map legend while a popup is open so it never covers the popup */
+.leaflet-container:has(.leaflet-popup) .map-legend { opacity: 0; pointer-events: none; }
+.map-legend { transition: opacity 0.2s ease; }

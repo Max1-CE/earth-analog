@@ -20,6 +20,10 @@
  * @property {number} lat
  * @property {number} lon
  * @property {string} source
+ * @property {string} region
+ * @property {string} description       // short popup text (English)
+ * @property {boolean} coordsVerified
+ * @property {{url:string, credit:string, license:string, page:string}|null} photo  // Earth only
  * @property {Object<string, number|null>} params  // keyed by PARAMS[].key
  */
 
@@ -61,6 +65,8 @@ function toBody(v) {
   return s in BODIES ? s : null;
 }
 
+const str = (v) => String(v ?? '').trim();
+
 /** Turn one raw CSV row into a Site, or null if it is unusable. */
 function normalizeRow(row, index) {
   const body = toBody(row.body);
@@ -81,6 +87,18 @@ function normalizeRow(row, index) {
     lat,
     lon,
     source: String(row.source ?? '').trim(),
+    region: str(row.region),
+    description: str(row.description),
+    coordsVerified: str(row.coords_verified).toLowerCase() === 'yes',
+    // Photos are shown for Earth sites only (Mars/Moon: none for now).
+    photo: body === 'earth' && /^https:\/\//.test(str(row.photo_url))
+      ? {
+        url: str(row.photo_url),
+        credit: str(row.photo_credit),
+        license: str(row.photo_license),
+        page: /^https:\/\//.test(str(row.photo_page)) ? str(row.photo_page) : '',
+      }
+      : null,
     params,
   };
 }

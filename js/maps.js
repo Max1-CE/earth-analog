@@ -298,15 +298,19 @@ export class MapView {
   /**
    * @param {HTMLElement} el      container (should carry data-theme)
    * @param {string} mapKey       key of BODY_MAPS ('earth' | 'mars' | 'moon' | 'moonGlobal')
-   * @param {{onSelect?: (site) => void, controls?: L.Control[]}} [opts]
+   * @param {{onSelect?: (site) => void, popup?: (site) => HTMLElement, controls?: L.Control[]}} [opts]
+   *   popup: builds the mini-window shown on marker click; an element inside it
+   *   with [data-action="details"] calls onSelect (opens the full sidebar).
+   *   Without `popup`, a marker click calls onSelect directly.
    */
-  constructor(el, mapKey, { onSelect, controls = [] } = {}) {
+  constructor(el, mapKey, { onSelect, popup, controls = [] } = {}) {
     const cfg = BODY_MAPS[mapKey];
     const body = cfg.body;
     this.mapKey = mapKey;
     this.body = body;
     this.polar = Boolean(cfg.polar);
     this.onSelect = onSelect;
+    this.popup = popup;
     this.markers = new Map(); // site.id -> L.Marker
     el.classList.toggle('map--polar', this.polar);
 
@@ -368,10 +372,44 @@ export class MapView {
     for (const site of sites) {
       const m = L.marker([site.lat, site.lon], { icon: makeIcon(site), title: site.name, keyboard: true });
       m.bindTooltip(site.name, { direction: 'top', offset: [0, -12] });
-      m.on('click', () => this.onSelect?.(site));
+      if (this.popup) {
+        m.bindPopup(() => this._popupFor(site, m), {
+          className: 'site-popup',
+          maxWidth: 300,
+          minWidth: 220,
+          offset: [0, -8],
+          autoPanPaddingTopLeft: [12, 12],
+          autoPanPaddingBottomRight: [12, 12],
+        });
+        m.on('popupopen', () => m.closeTooltip());
+      } else {
+        m.on('click', () => this.onSelect?.(site));
+      }
       m.addTo(this.layer);
       this.markers.set(site.id, m);
     }
+  }
+
+  _popupFor(site, marker) {
+    const el = this.popup(site);
+    // Called right before Leaflet lays the popup out: keep it inside the map
+    // (content scrolls if the map is short, e.g. stacked Compare panes on phones).
+    // The middle part (.popup__body) scrolls, header and button stay visible.
+    el.style.setProperty('--popup-max', `${Math.max(200, this.map.getSize().y - 90)}px`);
+    el.querySelector('[data-action="details"]')?.addEventListener('click', () => {
+      marker.closePopup();
+      this.onSelect?.(site);
+    });
+    return el;
+  }
+
+  /** Open a marker's popup programmatically (used by the #popup=<name> hash hook). */
+  openPopup(siteId) {
+    const m = this.markers.get(siteId);
+    if (!m) return false;
+    this.map.setView(m.getLatLng(), Math.max(this.map.getZoom(), 3), { animate: false });
+    m.openPopup();
+    return true;
   }
 
   highlight(siteId) {

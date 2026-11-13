@@ -61,7 +61,7 @@ function ensureMap(existing, el, body) {
   const key = mapKeyFor(body, state.moonProjection);
   if (existing && existing.mapKey === key) return existing;
   existing?.destroy(); // different CRS/tiles → rebuild
-  return new MapView(el, key, { onSelect: selectSite, controls: controlsFor(body) });
+  return new MapView(el, key, { onSelect: selectSite, popup: sitePopup, controls: controlsFor(body) });
 }
 
 function ensureSingleMap(body) {
@@ -146,6 +146,72 @@ function escapeHtml(s) {
 function siteBadge(site) {
   if (site.body === 'earth' && site.analog_of) return `Earth · ${BODIES[site.analog_of].short} analog`;
   return BODIES[site.body].label;
+}
+
+/* ---------- Photo & popup ---------- */
+
+/**
+ * Photo block with credit + licence line. Earth sites only; an Earth site
+ * without a photo gets a placeholder. Mars/Moon sites get nothing (for now).
+ */
+function photoBlock(site, cls = 'photo') {
+  if (site.body !== 'earth') return '';
+  const p = site.photo;
+  if (!p) {
+    // TODO: find a free-licence photo (Wikimedia Commons / NASA) for this site
+    return `<div class="${cls} ${cls}--empty" role="img" aria-label="No photo yet">Photo coming soon</div>`;
+  }
+  const credit = [p.credit, p.license].filter(Boolean).map(escapeHtml).join(' · ');
+  const creditHtml = p.page
+    ? `<a href="${escapeHtml(p.page)}" target="_blank" rel="noopener">${credit || 'Photo source'}</a>`
+    : credit;
+  return `
+    <figure class="${cls}">
+      <img src="${escapeHtml(p.url)}" alt="${escapeHtml(site.name)}" loading="lazy" decoding="async"
+           onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'photo-missing',textContent:'Photo unavailable'}))">
+      <figcaption>Photo: ${creditHtml}</figcaption>
+    </figure>`;
+}
+
+function analogLine(site) {
+  if (site.body === 'earth') {
+    return site.analog_of
+      ? `Analog of: <strong>${escapeHtml(BODIES[site.analog_of].short)}</strong>`
+      : 'Earth site (no analog target)';
+  }
+  return `Target site on <strong>${escapeHtml(BODIES[site.body].short)}</strong>`;
+}
+
+/**
+ * Description for display: "TODO: …" notes stay in sites.csv for the team
+ * but are not shown to visitors.
+ */
+function publicText(text) {
+  return text
+    .replace(/\s*\(TODO:[^)]*\)/g, '')
+    .replace(/\s*TODO:[^.]*(\.|$)/g, '')
+    .trim();
+}
+
+/** Mini-window shown when a marker is clicked (inherits the map pane's theme). */
+function sitePopup(site) {
+  const el = document.createElement('div');
+  el.className = 'popup';
+  el.innerHTML = `
+    <header class="popup__head">
+      <h3 class="popup__name">${escapeHtml(site.name)}</h3>
+      ${site.region ? `<p class="popup__region">${escapeHtml(site.region)}</p>` : ''}
+    </header>
+    <div class="popup__body">
+      ${photoBlock(site, 'popup__photo')}
+      ${site.description ? `<p class="popup__desc">${escapeHtml(publicText(site.description))}</p>` : ''}
+    </div>
+    <footer class="popup__foot">
+      <p class="popup__analog">${analogLine(site)}</p>
+      <p class="popup__coords">${formatCoords(site.lat, site.lon)}${site.coordsVerified ? '' : ' <span class="approx" title="Coordinates not yet verified">≈ approx.</span>'}</p>
+      <button type="button" class="popup__btn" data-action="details">More details</button>
+    </footer>`;
+  return el;
 }
 
 /* ---------- Similarity index ---------- */
@@ -347,11 +413,12 @@ function renderSidebar(site) {
     <header class="site-head">
       <span class="site-head__badge">${escapeHtml(siteBadge(site))}</span>
       <h2 class="site-head__name">${escapeHtml(site.name)}</h2>
-      <div class="site-head__coords">${formatCoords(site.lat, site.lon)}</div>
+      ${site.region ? `<div class="site-head__region">${escapeHtml(site.region)}</div>` : ''}
+      <div class="site-head__coords">${formatCoords(site.lat, site.lon)}${site.coordsVerified ? '' : ' <span class="approx" title="Coordinates not yet verified">≈ approx.</span>'}</div>
     </header>
 
-    <!-- TODO: real photo (add a photo_url column to sites.csv) -->
-    <div class="photo" role="img" aria-label="Photo placeholder">Photo coming soon</div>
+    ${photoBlock(site)}
+    ${site.description ? `<p class="site-desc">${escapeHtml(publicText(site.description))}</p>` : ''}
 
     ${similarityCard(site, sim)}
     ${rankingList(sim)}
@@ -441,10 +508,16 @@ async function init() {
       ? 'Could not load <code>data/sites.csv</code> from a local file. Serve the folder over HTTP, e.g. <code>python -m http.server 8000</code>, then open <code>http://localhost:8000</code>.'
       : `Could not load site data: ${escapeHtml(err.message || err)}`);
   }
+  const popupName = new URLSearchParams(location.hash.slice(1)).get('popup'); // read before writeHash()
   const siteName = readHash();
   render();
   const site = siteName && state.sites.find((s) => s.name === siteName);
   if (site) selectSite(site);
+
+  // #popup=<name>: open that site's mini-window (handy for links and screenshot tests)
+  const popupSite = popupName && state.sites.find((s) => s.name === popupName);
+  // (after a short delay so the initial fitBounds animation has finished)
+  if (popupSite) setTimeout(() => visibleMaps().some((m) => m.openPopup(popupSite.id)), 400);
 
   // Debug handle for the console: window.EA.similarity(a, b)
   window.EA = { state, similarity, WEIGHTS };
