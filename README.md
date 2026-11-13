@@ -26,7 +26,6 @@ js/maps.js            BODY_MAPS config (CRS, tiles), MapView class, markers, gri
 js/data.js            CSV loading; PARAMS, CRITERIA, SCENARIOS (mirror of metrics.py), status badges
 js/scores.js          ScoreBook: queries over scores.csv / ranking.csv; per-criterion breakdown
 js/charts.js          Chart.js charts: ranking, radar, heat map, raw parameters; PNG export
-js/gap.js             GAP_RULES: "How to close the gap" advice per criterion / direction / target
 data/sites.csv        the single source of site data (18 rows: references + Earth analogs)
 data/rock_similarity.csv  rock-class similarity matrix
 data/scores.csv       similarity of every analog with every reference (generated)
@@ -55,7 +54,6 @@ python analysis/metrics.py   # rewrites data/scores.csv and data/ranking.csv
 | Scenario weights | `SCENARIOS` in `analysis/metrics.py` **and** the copy in `js/data.js` (the site warns in the console if they disagree) |
 | High / Moderate / Low thresholds | `SIMILARITY_LEVELS` in `js/scores.js` |
 | "Matches" threshold | `MATCH_THRESHOLD` in `js/scores.js` (criterion similarity s, default 0.7) |
-| Gap advice texts | `GAP_RULES` in `js/gap.js` (`higher` / `lower` = Earth value vs target, `differs` for rock) |
 | Charts | `js/charts.js`; series colours in `SERIES` (validated for the dark themes) |
 | Analysis view | URL `#view=analysis&ref=<site_id>&analog=<site_id>&scn=equal` |
 | Change basemap | `BODY_MAPS[key].tiles` in `js/maps.js` (`moon` = south polar, `moonGlobal` = equirectangular) |

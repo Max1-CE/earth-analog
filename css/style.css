@@ -379,8 +379,6 @@ h1, h2, h3 { margin: 0; }
 .mitigations { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; line-height: 1.4; }
 .mitigations__for { display: block; color: var(--c-muted); font-size: 0.72rem; margin-top: 2px; }
 .mitigations__none { margin: 0; font-size: 0.8rem; color: var(--c-muted); font-style: italic; }
-.field-tips summary { cursor: pointer; font-size: 0.74rem; color: var(--c-muted); }
-.field-tips .tips { margin-top: 6px; }
 a.btn { text-decoration: none; display: inline-block; }
 .popup__limits strong { color: var(--c-text); font-weight: 600; }
 
@@ -591,20 +589,6 @@ a.btn { text-decoration: none; display: inline-block; }
 .gap-card__meta {
   display: flex; flex-wrap: wrap; gap: 4px 10px;
   font-size: 0.75rem; color: var(--c-muted); font-variant-numeric: tabular-nums;
-}
-.closable { font-weight: 600; }
-.closable--yes { color: var(--level-high); }
-.closable--partly { color: var(--level-moderate); }
-.closable--no { color: var(--level-low); }
-
-.tips { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-.tips li { font-size: 0.8rem; line-height: 1.4; color: var(--c-text); }
-.tip-kind {
-  display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 4px;
-  font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
-  line-height: 16px; vertical-align: 1px;
-  background: color-mix(in srgb, var(--c-accent) 18%, transparent);
-  color: var(--c-accent);
 }
 .source { font-size: 0.78rem; color: var(--c-muted); }
 

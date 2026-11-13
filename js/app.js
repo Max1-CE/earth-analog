@@ -11,7 +11,6 @@ import {
 } from './data.js';
 import { MapView, mapKeyFor, projectionControl } from './maps.js';
 import { ScoreBook, SCENARIO_CHOICES, breakdown, similarityLevel, MATCH_THRESHOLD } from './scores.js';
-import { gapAdvice, TIP_KINDS } from './gap.js';
 import { rankingChart, radarChart, heatmapChart, rawCharts, downloadPng, destroyAll, RAW_GROUPS } from './charts.js';
 
 const VIEWS = ['earth', 'mars', 'moon', 'compare', 'analysis'];
@@ -310,8 +309,6 @@ function matchSection(bd) {
 
 /* ---------- How to close the gap ---------- */
 
-const GAP_TIPS_PER_CARD = 3;
-
 function rawText(crit, site) {
   const v = crit.raw(site);
   if (crit.key === 'rock') return formatValue(PARAMS.find((p) => p.key === 'rock_class'), site.values.rock_class);
@@ -347,9 +344,6 @@ function gapSection(analog, reference, row, bd) {
 
   const cards = weak.map((item) => {
     const { list, unmapped } = mitigationsFor(reference.body, item.crit.key);
-    const advice = gapAdvice(item.crit.key, item.crit.raw(analog), item.crit.raw(reference), reference.body);
-    const tips = advice.tips.slice(0, GAP_TIPS_PER_CARD).map((t) => `
-      <li><span class="tip-kind tip-kind--${t.kind}">${escapeHtml(TIP_KINDS[t.kind] ?? t.kind)}</span>${escapeHtml(t.text)}</li>`).join('');
     const team = list.length
       ? `<ul class="mitigations">${list.map((m) => `
           <li>${escapeHtml(m.method)}${m.addressNames.length ? `<span class="mitigations__for">Addresses: ${m.addressNames.map(escapeHtml).join(', ')}</span>` : ''}</li>`).join('')}</ul>`
@@ -364,10 +358,6 @@ function gapSection(analog, reference, row, bd) {
           <span>Earth ${escapeHtml(rawText(item.crit, analog))} <span class="vs">vs</span> target ${escapeHtml(rawText(item.crit, reference))}</span>
         </div>
         ${team}
-        <details class="field-tips">
-          <summary>Field tips (site suggestions, not from the team documents)</summary>
-          <ul class="tips">${tips}</ul>
-        </details>
       </article>`;
   }).join('');
   return `<section>${head}<div class="gap-list">${cards}</div>
