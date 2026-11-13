@@ -6,7 +6,7 @@
  *       Analysis tab → renderAnalysis() (js/charts.js).
  */
 import {
-  loadAll, BODIES, PARAMS, CRITERIA, SCENARIOS, statusInfo, sitesOnBody, references, analogsOf,
+  loadAll, loadLimits, BODIES, PARAMS, CRITERIA, SCENARIOS, statusInfo, sitesOnBody, references, analogsOf,
   formatCoords, formatValue,
 } from './data.js';
 import { MapView, mapKeyFor, projectionControl } from './maps.js';
@@ -23,6 +23,7 @@ const state = {
   scenario: 'auto',       // 'auto' | key of SCENARIOS
   sites: [],
   book: null,             // ScoreBook
+  limits: null,           // data/limits.json ({mars, moon}) or null
   selected: null,         // Site shown in the sidebar
   referenceId: null,      // reference used for the selected analog (null = its pair)
   analysis: { referenceId: null, analogId: null }, // Analysis view selection
@@ -391,13 +392,95 @@ function siteHead(site) {
     ${site.description ? `<p class="site-desc">${escapeHtml(site.description)}</p>` : ''}`;
 }
 
+/** Field note for an analog from limits.json (what matches / what doesn't vs its reference). */
+function siteNote(siteId) {
+  for (const body of ['mars', 'moon']) {
+    const note = state.limits?.[body]?.site_notes?.find((n) => n.site_id === siteId);
+    if (note) return { ...note, body };
+  }
+  return null;
+}
+
 function limitsBlock(site) {
-  if (!site.limits) return '';
+  const note = site.role === 'analog' ? siteNote(site.id) : null;
+  const body = site.role === 'analog' ? site.analog_of : site.body;
+  if (!site.limits && !note) return '';
+  const ref = note && byId(note.reference_id);
   return `
     <section>
       <h3 class="section-title">Limits of the analogy</h3>
-      <p class="site-desc">${escapeHtml(site.limits)}</p>
+      ${site.limits && site.limits.trim() !== note?.mismatches.trim() ? `<p class="site-desc">${escapeHtml(site.limits)}</p>` : ''}
+      ${note ? `
+        <div class="note-grid">
+          <div class="note note--yes"><h4>Matches ${ref ? `${escapeHtml(note.compared_with ?? ref.name)}` : ''}</h4><p>${escapeHtml(note.matches)}</p></div>
+          <div class="note note--no"><h4>Doesn't match</h4><p>${escapeHtml(note.mismatches)}</p></div>
+        </div>` : ''}
+      ${state.limits?.[body] ? `<button type="button" class="btn btn--block" data-action="limits" data-body="${body}">What Earth cannot reproduce on ${escapeHtml(BODIES[body].short)} →</button>` : ''}
     </section>`;
+}
+
+/* ---------- Limits card in the Analysis view ---------- */
+
+function renderLimits(body, analogId) {
+  const L = state.limits?.[body];
+  const el = $('#limits-body');
+  $('#card-limits').hidden = !L;
+  if (!L) return;
+  $('#limits-title').textContent = `Limits of the analogy: Earth — ${BODIES[body].short}`;
+  $('#limits-pdf').href = L.source_pdf;
+
+  const verify = (f) => (f.verify ? ` <span class="st st--placeholder" title="${escapeHtml(f.verify_note || 'to be checked against sources')}">?</span>` : '');
+  const factorRows = L.factors.map((f) => {
+    const mit = L.mitigations.filter((m) => m.factors.includes(f.id));
+    return `
+      <tr${f.good_match ? ' class="is-good"' : ''}>
+        <th scope="row">${escapeHtml(f.label)}${f.good_match ? ' <span class="pair-tag">good match</span>' : ''}</th>
+        <td>${escapeHtml(f.target)}${verify(f)}</td>
+        <td>${escapeHtml(f.earth)}</td>
+        <td>${escapeHtml(f.why)}</td>
+        <td>${mit.length ? mit.map((m) => escapeHtml(m.text)).join('<br>') : '<span class="muted">—</span>'}</td>
+      </tr>`;
+  }).join('');
+  const general = L.mitigations.filter((m) => !m.factors.length);
+  const note = L.site_notes.find((n) => n.site_id === analogId);
+
+  el.innerHTML = `
+    <p class="limits__summary">${escapeHtml(L.summary)}</p>
+    <p class="limits__muted">${escapeHtml(L.not_in_metric)}</p>
+
+    <h3 class="section-title">What Earth cannot reproduce — and how to compensate</h3>
+    <div class="table-scroll">
+      <table class="limits-table">
+        <thead><tr><th scope="col">Factor</th><th scope="col">${escapeHtml(BODIES[body].short)}</th><th scope="col">Earth</th><th scope="col">Why it matters</th><th scope="col">How to compensate</th></tr></thead>
+        <tbody>${factorRows}</tbody>
+      </table>
+    </div>
+    ${general.length ? `<p class="limits__muted">${general.map((m) => `<strong>${escapeHtml(m.label)}:</strong> ${escapeHtml(m.text)}`).join(' ')}</p>` : ''}
+
+    ${note ? `
+      <h3 class="section-title">This analog: ${escapeHtml(note.label)}</h3>
+      <div class="note-grid">
+        <div class="note note--yes"><h4>Matches</h4><p>${escapeHtml(note.matches)}</p></div>
+        <div class="note note--no"><h4>Doesn't match</h4><p>${escapeHtml(note.mismatches)}</p></div>
+      </div>` : ''}
+
+    <div class="limits__cols">
+      <section>
+        <h3 class="section-title">What the analogs reproduce well</h3>
+        <ul class="limits__list">${L.good_for.map((g) => `<li><strong>${escapeHtml(g.label)}.</strong> ${escapeHtml(g.text)}</li>`).join('')}</ul>
+      </section>
+      <section>
+        <h3 class="section-title">For the presentation</h3>
+        <p class="limits__text">${escapeHtml(L.conclusion)}</p>
+        <p class="limits__caveat">${escapeHtml(L.caveat)}</p>
+        ${L.sun_note ? `<p class="limits__muted">${escapeHtml(L.sun_note)}</p>` : ''}
+      </section>
+    </div>
+
+    <details class="limits__sources">
+      <summary>Sources to cite and check</summary>
+      <ul>${L.sources.map((s) => `<li><strong>${escapeHtml(s.label)}:</strong> ${escapeHtml(s.text)}</li>`).join('')}</ul>
+    </details>`;
 }
 
 function renderAnalogSidebar(site) {
@@ -511,6 +594,7 @@ function renderAnalysis() {
     });
     rawCharts(RAW_GROUPS.map((g) => $(`#chart-${g.id}`)), { analog, reference });
   });
+  renderLimits(reference.body, analogId);
 }
 
 function pngFor(kind) {
@@ -534,11 +618,11 @@ function pngFor(kind) {
 /* Events & init                                                       */
 /* ------------------------------------------------------------------ */
 
-function openAnalysis(analogId, referenceId) {
+function openAnalysis(analogId, referenceId, scrollTo = '#card-radar') {
   state.analysis = { analogId: analogId || null, referenceId: referenceId || null };
   state.view = 'analysis';
   render();
-  requestAnimationFrame(() => $('#card-radar').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  requestAnimationFrame(() => $(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 }
 
 function setScenario(value) {
@@ -575,6 +659,12 @@ function bindEvents() {
     }
     const cmp = e.target.closest('[data-action="compare"]');
     if (cmp) openAnalysis(cmp.dataset.analog, cmp.dataset.ref);
+    const lim = e.target.closest('[data-action="limits"]');
+    if (lim && state.selected) {
+      const s = state.selected;
+      const refId = s.role === 'reference' ? s.id : (state.referenceId ?? s.pairId);
+      openAnalysis(s.role === 'analog' ? s.id : null, refId, '#card-limits');
+    }
   });
   sidebar.addEventListener('change', (e) => {
     if (e.target.matches('[data-scenario-select]')) setScenario(e.target.value);
@@ -636,9 +726,10 @@ function showStatus(html) {
 async function init() {
   bindEvents();
   try {
-    const data = await loadAll('data/');
+    const [data, limits] = await Promise.all([loadAll('data/'), loadLimits('data/limits.json')]);
     state.sites = data.sites;
     state.book = new ScoreBook(data);
+    state.limits = limits;
   } catch (err) {
     console.error(err);
     const fileProto = location.protocol === 'file:';

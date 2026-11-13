@@ -258,6 +258,22 @@ export async function loadAll(base = 'data/') {
   return { sites, scores, ranking };
 }
 
+/**
+ * "Limits of the analogy" (data/limits.json, English version of docs/limits_*.pdf).
+ * Optional: if the file is missing, the site works without the limits sections.
+ * @returns {Promise<{mars: object, moon: object}|null>}
+ */
+export async function loadLimits(url = 'data/limits.json') {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.warn('[data] limits not loaded', err);
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
