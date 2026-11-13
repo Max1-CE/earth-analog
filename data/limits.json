@@ -1,273 +1,73 @@
 {
-  "_about": "Limits of the analogy, English version of docs/limits_mars.pdf and docs/limits_moon.pdf (Ukrainian originals). Numbers are copied from the PDFs unchanged; 'verify': true marks values the PDFs themselves say must be checked against sources. Factor ids are shared between bodies where the factor is the same. site_notes[].site_id / reference_id refer to data/sites.csv.",
-  "version": 1,
+  "meta": {
+    "source": "Team documents 'Analog limits: Earth - Mars' and 'Analog limits: Earth - Moon (south pole)'",
+    "note": "Many numbers are marked 'to be verified' in the source documents. Radiation, pressure and gravity are deliberately excluded from the similarity metric.",
+    "criteria_link_note": "The 'criteria' field links a mitigation to similarity criteria (s_*) for the site panel. This mapping was added by the team; it is not stated in the source documents."
+  },
   "mars": {
-    "title": "Limits of the analogy: Earth — Mars",
-    "source_pdf": "docs/limits_mars.pdf",
     "references": ["MARS-JEZ", "MARS-GALE", "MARS-PHX"],
-    "summary": "Earth analogs are good for rehearsing field geology, drilling, cold-weather operations, searching for ice and salts, and studying dry soils. They do not replace testing in a thin CO₂ atmosphere, under space radiation and in Martian gravity.",
-    "not_in_metric": "Radiation, pressure and gravity are deliberately left out of the data table: no Earth analog gives a meaningful value for them. They are described here instead of in the CSV.",
+    "summary": "Earth analogs are suitable for field geology, drilling, cold operations, prospecting for ice and salts, and studying dry soils. They do not replace testing in a thin CO2 atmosphere, under space radiation and at Martian gravity.",
     "factors": [
-      {
-        "id": "pressure",
-        "label": "Atmosphere and pressure",
-        "target": "≈600 Pa (≈0.6 kPa), mostly CO₂",
-        "earth": "≈101 kPa, nitrogen and oxygen",
-        "why": "Wind moves sand differently, liquid water is unstable on the surface, and equipment and materials behave differently."
-      },
-      {
-        "id": "radiation",
-        "label": "Radiation",
-        "target": "No global magnetic field or ozone layer; surface dose about 0.6–0.7 mSv/day according to the RAD instrument (Curiosity)",
-        "earth": "≈2.4 mSv/year on average from natural sources",
-        "why": "Shielded shelters and limited work time are needed; this cannot be tested on Earth.",
-        "verify": true,
-        "verify_note": "The PDF marks the RAD dose as 'to be checked'."
-      },
-      {
-        "id": "gravity",
-        "label": "Gravity",
-        "target": "≈3.71 m/s² (≈0.38 g)",
-        "earth": "9.81 m/s²",
-        "why": "Changes how soil, drilling, walking and loads behave."
-      },
-      {
-        "id": "temperature",
-        "label": "Temperature",
-        "target": "Much colder than Earth, with a daily range of tens of degrees; in polar winter the surface reaches the CO₂ frost point (about −125 °C)",
-        "earth": "The coldest places on Earth reach about −90 °C",
-        "why": "Earth has no lasting conditions this cold combined with a thin atmosphere."
-      },
-      {
-        "id": "uv",
-        "label": "Ultraviolet",
-        "target": "Hard UV reaches the surface; there is no ozone layer",
-        "earth": "The ozone layer absorbs UV-C",
-        "why": "Destroys organic matter on the surface; Earth deserts do not reproduce this."
-      },
-      {
-        "id": "regolith",
-        "label": "Regolith",
-        "target": "Fine iron-rich dust and sand; contains perchlorates (≈0.5 wt% at the Phoenix site); oxidizing and toxic",
-        "earth": "Soils are altered by water, wind and organisms",
-        "why": "Perchlorates are hazardous to equipment and people; Earth soils do not imitate this.",
-        "verify": true,
-        "verify_note": "The PDF marks the perchlorate content at Phoenix as 'to be checked'."
-      },
-      {
-        "id": "water",
-        "label": "Water and ice",
-        "target": "Ground ice on the northern plains, hydrated minerals and traces of ancient lakes",
-        "earth": "Liquid water, rivers, lakes, microbes",
-        "why": "Earth analogs have biological processes and seasonal liquid water that Mars does not have today."
-      },
-      {
-        "id": "day_cycle",
-        "label": "Day and seasons",
-        "target": "Sol ≈24 h 40 min, year 687 Earth days, axial tilt 25.19°",
-        "earth": "Day 24 h, year 365 days, tilt 23.44°",
-        "why": "A good match, but the long Martian seasons differ.",
-        "good_match": true
-      },
-      {
-        "id": "dust_storms",
-        "label": "Dust storms",
-        "target": "Global storms occur that block the Sun for weeks",
-        "earth": "Local sand storms",
-        "why": "They change temperature and power supply; Earth has no full analog."
-      }
+      {"id": "atmosphere", "name": "Atmosphere and pressure", "target": "~600 Pa (~0.6 kPa), mostly CO2", "earth": "~101 kPa, nitrogen and oxygen", "why": "Wind moves sand differently, liquid water is unstable on the surface, equipment and materials behave differently."},
+      {"id": "radiation", "name": "Radiation", "target": "No global magnetic field or ozone layer; surface dose about 0.6-0.7 mSv/day (Curiosity RAD, to be verified)", "earth": "~2.4 mSv/year on average from natural sources", "why": "Requires shelters and limited working time; cannot be tested on Earth."},
+      {"id": "gravity", "name": "Gravity", "target": "~3.71 m/s2 (~0.38 g)", "earth": "9.81 m/s2", "why": "Changes the behaviour of soil, drilling, walking and loads."},
+      {"id": "temperature", "name": "Temperature", "target": "Much colder than Earth, daily range of tens of degrees; in polar winter the surface reaches the CO2 frost point (about -125 C)", "earth": "Coldest places on Earth about -90 C", "why": "Earth has no long-lasting cold of this kind combined with a thin atmosphere."},
+      {"id": "uv", "name": "Ultraviolet", "target": "Hard UV reaches the surface, no ozone layer", "earth": "Ozone layer absorbs UV-C", "why": "Destroys organics on the surface; Earth deserts do not reproduce this."},
+      {"id": "regolith", "name": "Regolith", "target": "Fine iron-rich dust and sand; contains perchlorates (~0.5 wt% at the Phoenix site, to be verified); oxidizing and toxic", "earth": "Soils altered by water, wind and organisms", "why": "Perchlorates are hazardous to equipment and people; Earth soils do not mimic this."},
+      {"id": "water", "name": "Water and ice", "target": "Ground ice in the northern plains, hydrated minerals, traces of ancient lakes", "earth": "Liquid water, rivers, lakes, microbes", "why": "Earth analogs have biological processes and seasonal liquid water that Mars lacks today."},
+      {"id": "day_cycle", "name": "Day and seasons", "target": "Sol ~24 h 40 min, year 687 Earth days, axial tilt 25.19 deg", "earth": "Day 24 h, year 365 days, tilt 23.44 deg", "why": "A good match, but the long seasons differ."},
+      {"id": "dust_storms", "name": "Dust storms", "target": "Global storms can block the Sun for weeks", "earth": "Local sandstorms", "why": "They change temperature and power supply; Earth has no full analog."}
     ],
     "mitigations": [
-      { "factors": ["pressure"], "label": "Pressure and atmospheric composition", "text": "Low-pressure CO₂ chambers and Martian soil simulants, e.g. JSC Mars-1A." },
-      { "factors": ["radiation", "uv"], "label": "Radiation and ultraviolet", "text": "Laboratory UV and irradiation sources, since Earth conditions do not reproduce them." },
-      { "factors": ["gravity"], "label": "Gravity", "text": "Parabolic flights, offloading suspension rigs, water immersion." },
-      { "factors": ["regolith"], "label": "Dust and perchlorates", "text": "Laboratory tests with perchlorates at safe concentrations." },
-      { "factors": [], "label": "Isolation", "text": "Closed missions such as the Mars Desert Research Station (MDRS) to test crew work and procedures." },
-      { "factors": ["water"], "label": "Water and ice", "text": "Drilling in McMurdo permafrost as a rehearsal for work on the northern plains of Mars." }
+      {"id": "low_pressure_chamber", "addresses": ["atmosphere"], "criteria": ["temp_mean", "temp_range"], "method": "Low-pressure CO2 chambers combined with Martian soil simulants such as JSC Mars-1A."},
+      {"id": "radiation_lab", "addresses": ["radiation", "uv"], "criteria": [], "method": "Laboratory UV and irradiation sources, since Earth conditions do not reproduce them."},
+      {"id": "gravity_offload", "addresses": ["gravity"], "criteria": [], "method": "Parabolic flights, offloading suspension rigs, water immersion."},
+      {"id": "perchlorate_lab", "addresses": ["regolith"], "criteria": ["rock"], "method": "Laboratory tests with perchlorates at safe concentrations; soil simulants such as JSC Mars-1A."},
+      {"id": "isolation_mdrs", "addresses": [], "criteria": [], "method": "Closed missions such as the Mars Desert Research Station (MDRS) to test crew work and procedures."},
+      {"id": "ice_drilling", "addresses": ["water"], "criteria": ["ice"], "method": "Drilling in McMurdo permafrost as a rehearsal for work in the Martian northern plains."}
     ],
-    "site_notes": [
-      {
-        "site_id": "NAM-RK", "reference_id": "MARS-JEZ",
-        "label": "Roter Kamm crater (Namibia), ≈2.5 km",
-        "matches": "Impact crater in a desert, sand-filled floor, wind erosion.",
-        "mismatches": "The target rock is granite and gneiss, not basalt; Jezero is much larger and has a delta and carbonates; much warmer; dense atmosphere."
-      },
-      {
-        "site_id": "NAM-DUN", "reference_id": "MARS-GALE",
-        "label": "Sossusvlei red dunes",
-        "compared_with": "Gale (Bagnold dunes)",
-        "matches": "Active dunes, iron-oxide coating on the sand, wind dynamics.",
-        "mismatches": "The sand is quartz, on Mars it is basaltic; the dense atmosphere changes sand transport; fog supplies moisture."
-      },
-      {
-        "site_id": "NAM-GRV", "reference_id": "MARS-GALE",
-        "label": "Gobabeb gravel plain",
-        "matches": "Stony hyper-arid plain, desert pavement.",
-        "mismatches": "Lichens and fog, no craters, much warmer."
-      },
-      {
-        "site_id": "MDV-TAY", "reference_id": "MARS-PHX",
-        "label": "Taylor and Wright Valleys (McMurdo)",
-        "matches": "Dry permafrost, salts in the soil, polygonal ground, cold.",
-        "mismatches": "In summer water melts and streams flow; pressure ~170 times higher; microbial mats; mean annual temperature about −20 °C, much warmer than Mars."
-      },
-      {
-        "site_id": "MDV-WRI", "reference_id": "MARS-PHX",
-        "label": "Taylor and Wright Valleys (McMurdo)",
-        "matches": "Dry permafrost, salts in the soil, polygonal ground, cold.",
-        "mismatches": "In summer water melts and streams flow; pressure ~170 times higher; microbial mats; mean annual temperature about −20 °C, much warmer than Mars."
-      },
-      {
-        "site_id": "MDV-DJP", "reference_id": "MARS-PHX",
-        "label": "Don Juan Pond (Wright Valley)",
-        "matches": "Brines and salts, an analog of Martian brines.",
-        "mismatches": "The brine is CaCl₂-based, on Mars it is perchlorates; the liquid is stable only on Earth."
-      },
-      {
-        "site_id": "MDV-BEA", "reference_id": "MARS-PHX",
-        "label": "Beacon Valley (McMurdo)",
-        "matches": "Buried ice under a thin soil layer, sublimation polygons.",
-        "mismatches": "Dense atmosphere; the ice has a different origin."
-      }
+    "good_at": [
+      "Cold and aridity: McMurdo Dry Valleys give realistic hyperarid cold-desert conditions for testing equipment and sampling methods.",
+      "Dry permafrost and salts: McMurdo and Don Juan Pond allow study of soils with perchlorates and brines.",
+      "Impact structures in desert: Roter Kamm shows how wind and sand modify a crater over time.",
+      "Dunes and wind erosion: Namibia provides material for studying dune shapes and motion.",
+      "Day length: the Martian sol nearly matches the Earth day, so rover and crew schedules can be rehearsed in real time."
     ],
-    "sun_note": "In our data the Sun elevation for the Namib is close to 90° and matches Jezero and Gale, while in McMurdo winter the noon Sun is below the horizon, as at the Phoenix site. This is one of the best matches in the project. However, for McMurdo and Phoenix the numbers follow from latitude, not from the same climate physics.",
-    "good_for": [
-      { "label": "Cold and dryness", "text": "The McMurdo Dry Valleys give realistic hyper-arid cold-desert conditions for testing equipment and sampling methods." },
-      { "label": "Dry permafrost and salts", "text": "McMurdo and Don Juan Pond allow studying soils with perchlorates and brines, important for the search for life and resources." },
-      { "label": "Impact structures in a desert", "text": "Roter Kamm shows how wind and sand change a crater over time." },
-      { "label": "Dunes and wind erosion", "text": "Namibia provides material for studying dune shapes and motion." },
-      { "label": "Day length", "text": "A Martian day is almost the same as an Earth day, so rover and crew schedules can be rehearsed in real time." }
-    ],
-    "conclusion": "The similarity ranking shows which Earth site is closest to a Martian reference in temperature, relief, ice, composition and illumination. It does not claim that the site fully reproduces Mars. Pressure, radiation and gravity need separate test stands and chambers; combining field analogs with laboratory tests gives the most complete picture.",
-    "caveat": "Many numbers in the project table (temperatures, slopes, crater density, ice fraction) have status 'test'. The ranking can therefore be shown only as a demonstration of the method until they are replaced with data from MODIS, NASADEM, MOLA and the Robbins crater catalogue.",
-    "sources": [
-      { "label": "Jezero temperatures", "text": "Munguira et al. 2024, JGR Planets; Munguira et al. 2023" },
-      { "label": "Jezero meteorology", "text": "Nature Geoscience" },
-      { "label": "Gale, REMS", "text": "ground thermal properties" },
-      { "label": "McMurdo as a Phoenix analog", "text": "NASA NTRS 20100003844; Tamppari et al. 2012" },
-      { "label": "McMurdo air temperatures", "text": "Obryk et al. 2020" },
-      { "label": "Roter Kamm", "text": "NASA Earth Observatory; PIA00503" },
-      { "label": "Databases for missing values", "text": "MOLA and Mars Trek; CRISM and REMS in PDS; MODIS LST and NASADEM in Earthdata; Robbins crater catalogue for Mars" }
-    ]
+    "conclusion": "The similarity ranking shows which Earth site is closest to a Martian reference in temperature, relief, ice, composition and illumination. It does not claim the site fully reproduces Mars. Pressure, radiation and gravity need dedicated test stands and chambers."
   },
   "moon": {
-    "title": "Limits of the analogy: Earth — Moon",
-    "source_pdf": "docs/limits_moon.pdf",
     "references": ["MOON-SHK-RIM", "MOON-SHK-PSR", "MOON-MAL"],
-    "summary": "Earth analogs are good for rehearsing logistics, drilling, cold-weather operations, searching for ice and studying impact rocks. They do not replace testing in vacuum, under space radiation and in lunar gravity.",
-    "not_in_metric": "Radiation, pressure and gravity are deliberately left out of the data table: no Earth analog gives a meaningful value for them. They are described here instead of in the CSV.",
+    "summary": "Earth analogs are suitable for rehearsing logistics, drilling, cold operations, ice prospecting and studying impact rocks. They do not replace testing in vacuum, under space radiation and at lunar gravity.",
     "factors": [
-      {
-        "id": "pressure",
-        "label": "Atmosphere and pressure",
-        "target": "Practically vacuum (of order 10⁻¹² Pa)",
-        "earth": "≈101 kPa",
-        "why": "No wind, fog, scattered light or heat exchange through air; equipment and materials behave differently."
-      },
-      {
-        "id": "radiation",
-        "label": "Radiation",
-        "target": "Direct galactic cosmic rays and solar flares; measured dose about 1.4 mSv/day (Chang'E-4)",
-        "earth": "≈2.4 mSv/year on average",
-        "why": "Shielded shelters and limited work time are needed; this cannot be tested on Earth."
-      },
-      {
-        "id": "gravity",
-        "label": "Gravity",
-        "target": "≈1.62 m/s² (≈0.17 g)",
-        "earth": "9.81 m/s²",
-        "why": "Changes how soil, drilling, walking, loads and dust behave."
-      },
-      {
-        "id": "temperature",
-        "label": "Permanently shadowed regions",
-        "target": "Crater cold traps without sunlight for billions of years; temperature can drop to −230 °C and below",
-        "earth": "The coldest places on Earth reach about −90 °C",
-        "why": "Earth has nothing even close to the conditions in which the ice is preserved."
-      },
-      {
-        "id": "illumination",
-        "label": "Polar illumination",
-        "target": "The Sun stays within about ±1.5° of the horizon (lunar axial tilt 1.54°)",
-        "earth": "In polar regions the Sun rises to 30–40°, and polar night comes in winter",
-        "why": "Long shadows and harsh contrast on the Moon are of a completely different kind."
-      },
-      {
-        "id": "regolith",
-        "label": "Regolith",
-        "target": "Sharp glassy dust made by micrometeorite impacts, electrostatically charged",
-        "earth": "Soils are altered by water, wind and organisms",
-        "why": "Dust damages mechanisms and breathing systems; Earth soil does not imitate this."
-      },
-      {
-        "id": "day_cycle",
-        "label": "Day cycle",
-        "target": "One lunar day lasts ≈29.5 Earth days",
-        "earth": "24 hours",
-        "why": "Changes the thermal regime, power supply and work schedule."
-      },
-      {
-        "id": "water",
-        "label": "Water and life",
-        "target": "Water as ice in the soil (LCROSS: about 5.6 wt% at Cabeus); no life",
-        "earth": "Liquid water, plants, microbes",
-        "why": "Earth analogs bring contamination and biological processes that do not exist on the Moon."
-      }
+      {"id": "atmosphere", "name": "Atmosphere and pressure", "target": "Practically vacuum (order of 1e-12 Pa)", "earth": "~101 kPa", "why": "No wind, fog, scattered light or heat exchange through air; equipment and materials behave differently."},
+      {"id": "radiation", "name": "Radiation", "target": "Direct galactic cosmic rays and solar flares; measured dose about 1.4 mSv/day (Chang'E-4)", "earth": "~2.4 mSv/year on average", "why": "Requires shelters and limited working time; cannot be tested on Earth."},
+      {"id": "gravity", "name": "Gravity", "target": "~1.62 m/s2 (~0.17 g)", "earth": "9.81 m/s2", "why": "Changes the behaviour of soil, drilling, walking, loads and dust."},
+      {"id": "psr", "name": "Permanently shadowed regions", "target": "Crater cold traps without sunlight for billions of years; temperature can drop to -230 C and below", "earth": "Coldest places on Earth about -90 C", "why": "Earth has nothing close to the conditions in which the ice is preserved."},
+      {"id": "illumination", "name": "Polar illumination", "target": "Sun stays within about +/-1.5 deg of the horizon (lunar axial tilt 1.54 deg)", "earth": "In polar regions the Sun rises to 30-40 deg; polar night in winter", "why": "Long shadows and sharp contrast on the Moon are of a completely different nature."},
+      {"id": "regolith", "name": "Regolith", "target": "Sharp glassy dust formed by micrometeorite impacts, electrostatically charged", "earth": "Soils altered by water, wind and organisms", "why": "Dust damages mechanisms and breathing systems; Earth soil does not mimic this."},
+      {"id": "day_cycle", "name": "Day cycle", "target": "One lunar day lasts ~29.5 Earth days", "earth": "24 hours", "why": "Changes thermal regime, power supply and work schedule."},
+      {"id": "water", "name": "Water and life", "target": "Water as ice in the soil (LCROSS: about 5.6 wt% at Cabeus); no life", "earth": "Liquid water, plants, microbes", "why": "Earth analogs bring contamination and biological processes absent on the Moon."}
     ],
     "mitigations": [
-      { "factors": ["pressure", "regolith"], "label": "Vacuum and dust", "text": "Thermal-vacuum chambers with regolith simulants (e.g. the anorthosite-based highlands simulant LHS-1)." },
-      { "factors": ["pressure", "radiation"], "label": "Thin atmosphere and radiation", "text": "High altitude lowers pressure only partly and raises the cosmic-ray dose only moderately, so it is a supplement, not a substitute." },
-      { "factors": ["gravity"], "label": "Gravity", "text": "Mechanical suspension and offloading systems, parabolic flights, water immersion." },
-      { "factors": [], "label": "Isolation", "text": "Closed missions at stations such as the Haughton–Mars Project, to test crew psychology, resources and procedures in critical situations." },
-      { "factors": ["water"], "label": "Water", "text": "Rehearsing ice extraction from permafrost on Devon and Ellesmere as a step towards lunar craters." }
+      {"id": "thermal_vacuum", "addresses": ["atmosphere", "regolith", "psr"], "criteria": ["temp_mean", "temp_range"], "method": "Thermal-vacuum chambers with regolith simulants (for example the anorthosite-based highlands simulant LHS-1)."},
+      {"id": "regolith_simulant", "addresses": ["regolith"], "criteria": ["rock"], "method": "Highlands regolith simulant LHS-1, based on anorthosite."},
+      {"id": "high_altitude", "addresses": ["atmosphere", "radiation"], "criteria": [], "method": "High altitude lowers pressure only partly and raises cosmic-ray dose only moderately: a supplement, not a replacement."},
+      {"id": "gravity_offload", "addresses": ["gravity"], "criteria": [], "method": "Mechanical suspension and offloading systems, parabolic flights, water immersion."},
+      {"id": "isolation_hmp", "addresses": [], "criteria": [], "method": "Closed missions at stations such as the Haughton-Mars Project to test crew psychology, resources and procedures in critical situations."},
+      {"id": "ice_drilling", "addresses": ["water", "psr"], "criteria": ["ice"], "method": "Rehearsing ice extraction from permafrost on Devon and Ellesmere islands as a step toward lunar craters."}
     ],
-    "site_notes": [
-      {
-        "site_id": "DEV-HAU", "reference_id": "MOON-SHK-RIM",
-        "label": "Haughton (Devon), ≈23 km",
-        "matches": "Impact crater in a polar desert, permafrost, low Sun, well-known station for mission rehearsals.",
-        "mismatches": "The rock is carbonate, not anorthosite; there is an atmosphere, plants and liquid water."
-      },
-      {
-        "site_id": "DEV-PLT", "reference_id": "MOON-MAL",
-        "label": "Devon Island plateau",
-        "matches": "Flat terrain, long shadows, permafrost.",
-        "mismatches": "No craters; the Sun rises to ≈38° and polar night comes in winter."
-      },
-      {
-        "site_id": "ELL-FOS", "reference_id": "MOON-SHK-PSR",
-        "label": "Fosheim Peninsula (Eureka, Ellesmere)",
-        "matches": "Massive ground ice, a good test ground for drilling and ice prospecting.",
-        "mismatches": "Much warmer than in the Moon's shadowed craters; the ice is of terrestrial origin."
-      },
-      {
-        "site_id": "MIS-ANO", "reference_id": "MOON-MAL",
-        "label": "Mistastin, anorthosite (Labrador), ≈28 km",
-        "matches": "Target composition closest to the lunar highlands (mostly anorthosite).",
-        "mismatches": "Forest, lake, humid climate; the polar Sun is not reproduced; weathering by water."
-      },
-      {
-        "site_id": "MIS-MLT", "reference_id": "MOON-SHK-RIM",
-        "label": "Mistastin, impact melt",
-        "matches": "Breccias and melt rocks similar to Apollo samples.",
-        "mismatches": "Water and weathering alter the rock; there is no space weathering."
-      }
+    "good_at": [
+      "Impact structures in the right rocks: Mistastin shows how an impact alters anorthosite; Haughton helps study crater morphology and expedition logistics.",
+      "Cold and permafrost: Devon and Ellesmere give realistic conditions for equipment and people at low temperatures.",
+      "Ground ice: Fosheim and permafrost valleys allow testing of drilling, radar sounding and ice extraction.",
+      "Illumination geometry with long shadows on a polar plateau, although the Sun is higher than on the Moon."
     ],
-    "sun_note": "Numbers in this table (crater diameters, temperatures, Sun elevation) must be checked against the final CSV and the source list.",
-    "good_for": [
-      { "label": "Impact structures in the right rocks", "text": "Mistastin shows how an impact changes anorthosite, and Haughton helps study crater morphology and expedition logistics." },
-      { "label": "Cold and permafrost", "text": "Devon and Ellesmere give realistic low-temperature conditions for equipment and people." },
-      { "label": "Ground ice", "text": "Fosheim and permafrost valleys allow testing drilling, radar sounding and ice extraction methods." },
-      { "label": "Lighting geometry with long shadows", "text": "On a polar plateau, though the Sun stands higher above the horizon than on the Moon." }
-    ],
-    "conclusion": "The similarity ranking shows which Earth site is closest to a lunar reference in temperature, relief, ice, composition and illumination. It does not claim that the site fully reproduces the Moon. Vacuum, radiation and gravity need separate test stands and chambers; combining field analogs with laboratory tests gives the most complete picture.",
-    "caveat": "Check all numbers against sources before submission and add links without the utm_source parameter.",
-    "sources": [
-      { "label": "Lunar surface temperature and relief", "text": "LRO Diviner; LOLA (relief, slopes)" },
-      { "label": "Ice and hydrogen in shadowed craters", "text": "LCROSS, LEND" },
-      { "label": "Surface radiation dose", "text": "Chang'E-4 LND" },
-      { "label": "Craters", "text": "Robbins crater catalogue for the Moon; Earth Impact Database for terrestrial structures" },
-      { "label": "Earth sites", "text": "Publications on Haughton, Mistastin and the Haughton–Mars Project; MODIS LST and ArcticDEM" }
-    ]
+    "conclusion": "The similarity ranking shows which Earth site is closest to a lunar reference in temperature, relief, ice, composition and illumination. It does not claim the site fully reproduces the Moon. Vacuum, radiation and gravity need dedicated test stands and chambers."
+  },
+  "unmapped_criteria": {
+    "craters": "No mitigation in the source documents.",
+    "slope": "No mitigation in the source documents.",
+    "relief": "No mitigation in the source documents.",
+    "sun": "No mitigation in the source documents; the low polar Sun cannot be reproduced on Earth."
   }
 }

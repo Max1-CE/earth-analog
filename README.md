@@ -31,7 +31,7 @@ data/sites.csv        the single source of site data (18 rows: references + Eart
 data/rock_similarity.csv  rock-class similarity matrix
 data/scores.csv       similarity of every analog with every reference (generated)
 data/ranking.csv      analogs ranked per reference (generated)
-data/limits.json      "Limits of the analogy" (English, from docs/limits_*.pdf): factors, mitigations, site notes
+data/limits.json      team file "Limits of the analogy" (factors, mitigations with criteria links, good_at, conclusion)
 docs/limits_mars.pdf, docs/limits_moon.pdf   Ukrainian originals of the limits documents
 analysis/metrics.py   computes scores.csv and ranking.csv from sites.csv
 analysis/CHANGES.md   what the data contains and what is still unverified
@@ -61,7 +61,7 @@ python analysis/metrics.py   # rewrites data/scores.csv and data/ranking.csv
 | Change basemap | `BODY_MAPS[key].tiles` in `js/maps.js` (`moon` = south polar, `moonGlobal` = equirectangular) |
 | Moon projection default | `state.moonProjection` in `js/app.js`, or URL `#view=moon&proj=global` |
 | Change colors | theme blocks at the top of `css/style.css` |
-| Limits / mitigations texts | `data/limits.json` (`factors[].id` link `mitigations[].factors`; `site_notes[].site_id` = analog in `sites.csv`); shown by `renderLimits()` / `limitsBlock()` in `js/app.js` |
+| Limits / mitigations texts | `data/limits.json` (team file: `mitigations[].addresses` → `factors[].id`, `mitigations[].criteria` → s_* criteria, `unmapped_criteria`); Analysis card `renderLimits()`, sidebar `gapSection()` (criteria with s < `MITIGATION_THRESHOLD` = 0.5) in `js/app.js` |
 | Sidebar content | `renderSidebar()` and helpers in `js/app.js` |
 
 Screenshot tests: headless Chrome with `--force-prefers-reduced-motion` (charts and CSS

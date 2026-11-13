@@ -11,7 +11,7 @@ import {
 } from './data.js';
 import { MapView, mapKeyFor, projectionControl } from './maps.js';
 import { ScoreBook, SCENARIO_CHOICES, breakdown, similarityLevel, MATCH_THRESHOLD } from './scores.js';
-import { gapAdvice, TIP_KINDS, CLOSABLE_LABELS } from './gap.js';
+import { gapAdvice, TIP_KINDS } from './gap.js';
 import { rankingChart, radarChart, heatmapChart, rawCharts, downloadPng, destroyAll, RAW_GROUPS } from './charts.js';
 
 const VIEWS = ['earth', 'mars', 'moon', 'compare', 'analysis'];
@@ -321,36 +321,57 @@ function rawText(crit, site) {
   return `${Number(v).toFixed(digits)}${unit}`;
 }
 
+/** Criteria below this similarity get mitigations from limits.json in the sidebar. */
+const MITIGATION_THRESHOLD = 0.5;
+
+/** Team mitigations (limits.json) linked to a criterion via `criteria`, or the unmapped_criteria text. */
+function mitigationsFor(body, critKey) {
+  const L = state.limits?.[body];
+  if (!L) return { list: [], unmapped: null };
+  const factorName = Object.fromEntries(L.factors.map((f) => [f.id, f.name]));
+  const list = L.mitigations
+    .filter((m) => m.criteria.includes(critKey))
+    .map((m) => ({ ...m, addressNames: m.addresses.map((id) => factorName[id] ?? id) }));
+  return { list, unmapped: list.length ? null : (state.limits.unmapped_criteria?.[critKey] ?? null) };
+}
+
 function gapSection(analog, reference, row, bd) {
-  if (!bd.mismatches.length) {
-    return `<section><h3 class="section-title">How to close the gap</h3><p class="match-empty">No significant gaps.</p></section>`;
-  }
-  const cards = bd.mismatches.map((item) => {
+  const weak = [...bd.matches, ...bd.mismatches]
+    .filter((i) => i.s < MITIGATION_THRESHOLD)
+    .sort((p, q) => q.gain - p.gain);
+  const head = `
+      <h3 class="section-title">How to close the gap</h3>
+      <p class="match-caption">Criteria with similarity s &lt; ${MITIGATION_THRESHOLD} vs <strong>${escapeHtml(reference.name)}</strong>,
+        with methods from the team’s <em>Limits of the analogy</em> documents (<code>limits.json</code>).</p>`;
+  if (!weak.length) return `<section>${head}<p class="match-empty">No criterion is below ${MITIGATION_THRESHOLD}.</p></section>`;
+
+  const cards = weak.map((item) => {
+    const { list, unmapped } = mitigationsFor(reference.body, item.crit.key);
     const advice = gapAdvice(item.crit.key, item.crit.raw(analog), item.crit.raw(reference), reference.body);
     const tips = advice.tips.slice(0, GAP_TIPS_PER_CARD).map((t) => `
       <li><span class="tip-kind tip-kind--${t.kind}">${escapeHtml(TIP_KINDS[t.kind] ?? t.kind)}</span>${escapeHtml(t.text)}</li>`).join('');
+    const team = list.length
+      ? `<ul class="mitigations">${list.map((m) => `
+          <li>${escapeHtml(m.method)}${m.addressNames.length ? `<span class="mitigations__for">Addresses: ${m.addressNames.map(escapeHtml).join(', ')}</span>` : ''}</li>`).join('')}</ul>`
+      : `<p class="mitigations__none">${escapeHtml(unmapped ?? 'No mitigation listed.')}</p>`;
     return `
       <article class="gap-card">
         <header class="gap-card__head">
-          <span class="gap-card__title">${escapeHtml(item.crit.label)} — ${escapeHtml(advice.summary)}</span>
+          <span class="gap-card__title">${escapeHtml(item.crit.label)} <span class="vs">s = ${item.s.toFixed(2)}</span></span>
           <span class="gap-card__gain" title="Score gain if this criterion matched exactly">+${item.gain.toFixed(2)}</span>
         </header>
         <div class="gap-card__meta">
           <span>Earth ${escapeHtml(rawText(item.crit, analog))} <span class="vs">vs</span> target ${escapeHtml(rawText(item.crit, reference))}</span>
-          <span>${Math.round(item.share * 100)}% of gap</span>
-          <span class="closable closable--${advice.closable}">${escapeHtml(CLOSABLE_LABELS[advice.closable])}</span>
         </div>
-        <ul class="tips">${tips}</ul>
+        ${team}
+        <details class="field-tips">
+          <summary>Field tips (site suggestions, not from the team documents)</summary>
+          <ul class="tips">${tips}</ul>
+        </details>
       </article>`;
   }).join('');
-  const top = bd.mismatches.slice(0, 3);
-  const after = Math.min(1, row.score + top.reduce((a, i) => a + i.gain, 0));
-  return `
-    <section>
-      <h3 class="section-title">How to close the gap</h3>
-      <p class="match-caption">Closing the top ${top.length} gap${top.length > 1 ? 's' : ''} would raise the score
-        from <strong>${fmtScore(row.score)}</strong> to <strong>${fmtScore(after)}</strong>.</p>
-      <div class="gap-list">${cards}</div>
+  return `<section>${head}<div class="gap-list">${cards}</div>
+      ${state.limits?.meta?.criteria_link_note ? `<p class="match-skipped">${escapeHtml(state.limits.meta.criteria_link_note)}</p>` : ''}
     </section>`;
 }
 
@@ -392,95 +413,75 @@ function siteHead(site) {
     ${site.description ? `<p class="site-desc">${escapeHtml(site.description)}</p>` : ''}`;
 }
 
-/** Field note for an analog from limits.json (what matches / what doesn't vs its reference). */
-function siteNote(siteId) {
-  for (const body of ['mars', 'moon']) {
-    const note = state.limits?.[body]?.site_notes?.find((n) => n.site_id === siteId);
-    if (note) return { ...note, body };
-  }
-  return null;
-}
-
 function limitsBlock(site) {
-  const note = site.role === 'analog' ? siteNote(site.id) : null;
   const body = site.role === 'analog' ? site.analog_of : site.body;
-  if (!site.limits && !note) return '';
-  const ref = note && byId(note.reference_id);
+  const hasCard = Boolean(state.limits?.[body]);
+  if (!site.limits && !hasCard) return '';
   return `
     <section>
       <h3 class="section-title">Limits of the analogy</h3>
-      ${site.limits && site.limits.trim() !== note?.mismatches.trim() ? `<p class="site-desc">${escapeHtml(site.limits)}</p>` : ''}
-      ${note ? `
-        <div class="note-grid">
-          <div class="note note--yes"><h4>Matches ${ref ? `${escapeHtml(note.compared_with ?? ref.name)}` : ''}</h4><p>${escapeHtml(note.matches)}</p></div>
-          <div class="note note--no"><h4>Doesn't match</h4><p>${escapeHtml(note.mismatches)}</p></div>
-        </div>` : ''}
-      ${state.limits?.[body] ? `<button type="button" class="btn btn--block" data-action="limits" data-body="${body}">What Earth cannot reproduce on ${escapeHtml(BODIES[body].short)} →</button>` : ''}
+      ${site.limits ? `<p class="site-desc">${escapeHtml(site.limits)}</p>` : ''}
+      ${hasCard ? `<button type="button" class="btn btn--block" data-action="limits">What Earth can’t reproduce on ${escapeHtml(BODIES[body].short)} →</button>` : ''}
     </section>`;
 }
 
-/* ---------- Limits card in the Analysis view ---------- */
+/* ---------- Limits card in the Analysis view (data/limits.json) ---------- */
 
-function renderLimits(body, analogId) {
+function renderLimits(body) {
   const L = state.limits?.[body];
-  const el = $('#limits-body');
   $('#card-limits').hidden = !L;
   if (!L) return;
-  $('#limits-title').textContent = `Limits of the analogy: Earth — ${BODIES[body].short}`;
-  $('#limits-pdf').href = L.source_pdf;
+  const short = BODIES[body].short;
+  $('#limits-title').textContent = `Limits of the analogy: Earth — ${short}`;
+  $('#limits-pdf').href = `docs/limits_${body}.pdf`;
 
-  const verify = (f) => (f.verify ? ` <span class="st st--placeholder" title="${escapeHtml(f.verify_note || 'to be checked against sources')}">?</span>` : '');
-  const factorRows = L.factors.map((f) => {
-    const mit = L.mitigations.filter((m) => m.factors.includes(f.id));
-    return `
-      <tr${f.good_match ? ' class="is-good"' : ''}>
-        <th scope="row">${escapeHtml(f.label)}${f.good_match ? ' <span class="pair-tag">good match</span>' : ''}</th>
-        <td>${escapeHtml(f.target)}${verify(f)}</td>
+  const factorName = Object.fromEntries(L.factors.map((f) => [f.id, f.name]));
+  const critLabel = Object.fromEntries(CRITERIA.map((c) => [c.key, c.label]));
+  const factorRows = L.factors.map((f) => `
+      <tr>
+        <th scope="row">${escapeHtml(f.name)}</th>
+        <td>${escapeHtml(f.target)}</td>
         <td>${escapeHtml(f.earth)}</td>
         <td>${escapeHtml(f.why)}</td>
-        <td>${mit.length ? mit.map((m) => escapeHtml(m.text)).join('<br>') : '<span class="muted">—</span>'}</td>
-      </tr>`;
-  }).join('');
-  const general = L.mitigations.filter((m) => !m.factors.length);
-  const note = L.site_notes.find((n) => n.site_id === analogId);
+      </tr>`).join('');
+  const mitigations = L.mitigations.map((m) => `
+      <li class="mitigation">
+        <p>${escapeHtml(m.method)}</p>
+        <p class="mitigation__meta">
+          ${m.addresses.length ? `Addresses: ${m.addresses.map((id) => escapeHtml(factorName[id] ?? id)).join(', ')}` : 'General (no specific factor)'}
+          ${m.criteria.length ? ` · criteria: ${m.criteria.map((c) => `<span class="chip">${escapeHtml(critLabel[c] ?? c)}</span>`).join(' ')}` : ''}
+        </p>
+      </li>`).join('');
 
-  el.innerHTML = `
+  $('#limits-body').innerHTML = `
     <p class="limits__summary">${escapeHtml(L.summary)}</p>
-    <p class="limits__muted">${escapeHtml(L.not_in_metric)}</p>
+    ${state.limits.meta?.note ? `<p class="limits__muted">${escapeHtml(state.limits.meta.note)}</p>` : ''}
 
-    <h3 class="section-title">What Earth cannot reproduce — and how to compensate</h3>
-    <div class="table-scroll">
-      <table class="limits-table">
-        <thead><tr><th scope="col">Factor</th><th scope="col">${escapeHtml(BODIES[body].short)}</th><th scope="col">Earth</th><th scope="col">Why it matters</th><th scope="col">How to compensate</th></tr></thead>
-        <tbody>${factorRows}</tbody>
-      </table>
-    </div>
-    ${general.length ? `<p class="limits__muted">${general.map((m) => `<strong>${escapeHtml(m.label)}:</strong> ${escapeHtml(m.text)}`).join(' ')}</p>` : ''}
+    <section>
+      <h3 class="section-title">What Earth can’t reproduce</h3>
+      <div class="table-scroll">
+        <table class="limits-table">
+          <thead><tr><th scope="col">Factor</th><th scope="col">${escapeHtml(short)}</th><th scope="col">Earth</th><th scope="col">Why it matters</th></tr></thead>
+          <tbody>${factorRows}</tbody>
+        </table>
+      </div>
+    </section>
 
-    ${note ? `
-      <h3 class="section-title">This analog: ${escapeHtml(note.label)}</h3>
-      <div class="note-grid">
-        <div class="note note--yes"><h4>Matches</h4><p>${escapeHtml(note.matches)}</p></div>
-        <div class="note note--no"><h4>Doesn't match</h4><p>${escapeHtml(note.mismatches)}</p></div>
-      </div>` : ''}
+    <section>
+      <h3 class="section-title">How to close the gap</h3>
+      <ul class="mitigation-list">${mitigations}</ul>
+      ${state.limits.meta?.criteria_link_note ? `<p class="limits__muted">${escapeHtml(state.limits.meta.criteria_link_note)}</p>` : ''}
+    </section>
 
-    <div class="limits__cols">
-      <section>
-        <h3 class="section-title">What the analogs reproduce well</h3>
-        <ul class="limits__list">${L.good_for.map((g) => `<li><strong>${escapeHtml(g.label)}.</strong> ${escapeHtml(g.text)}</li>`).join('')}</ul>
-      </section>
-      <section>
-        <h3 class="section-title">For the presentation</h3>
-        <p class="limits__text">${escapeHtml(L.conclusion)}</p>
-        <p class="limits__caveat">${escapeHtml(L.caveat)}</p>
-        ${L.sun_note ? `<p class="limits__muted">${escapeHtml(L.sun_note)}</p>` : ''}
-      </section>
-    </div>
-
-    <details class="limits__sources">
-      <summary>Sources to cite and check</summary>
-      <ul>${L.sources.map((s) => `<li><strong>${escapeHtml(s.label)}:</strong> ${escapeHtml(s.text)}</li>`).join('')}</ul>
-    </details>`;
+    <section class="limits__conclusion">
+      <h3 class="section-title">Conclusion</h3>
+      <h4 class="limits__sub">What Earth analogs are good at</h4>
+      <ul class="limits__list">${L.good_at.map((g) => {
+        const i = g.indexOf(':');
+        return i > 0 && i < 60 ? `<li><strong>${escapeHtml(g.slice(0, i))}:</strong>${escapeHtml(g.slice(i + 1))}</li>` : `<li>${escapeHtml(g)}</li>`;
+      }).join('')}</ul>
+      <p class="limits__text">${escapeHtml(L.conclusion)}</p>
+    </section>`;
 }
 
 function renderAnalogSidebar(site) {
@@ -594,7 +595,7 @@ function renderAnalysis() {
     });
     rawCharts(RAW_GROUPS.map((g) => $(`#chart-${g.id}`)), { analog, reference });
   });
-  renderLimits(reference.body, analogId);
+  renderLimits(reference.body);
 }
 
 function pngFor(kind) {
