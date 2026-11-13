@@ -708,6 +708,9 @@ body[data-view="globe"] .tabs { background: rgba(5, 7, 26, 0.6); border-color: c
 body[data-view="globe"] .tab { font-family: var(--font-label); letter-spacing: 0.06em; }
 body[data-view="globe"] .tab[aria-selected="true"] { background: var(--accent); color: var(--space-1); }
 body[data-view="globe"] .app-footer { color: #8b93a8; }
+.app-footer { display: flex; flex-direction: column; gap: 4px; }
+.app-footer a { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); text-underline-offset: 2px; }
+.app-footer a:hover { color: var(--c-text); }
 
 /* Map view sub-navigation */
 .map-subnav { align-self: flex-start; }
