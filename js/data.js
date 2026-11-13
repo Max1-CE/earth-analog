@@ -113,6 +113,10 @@ export function statusInfo(code) {
 /* Parsing                                                             */
 /* ------------------------------------------------------------------ */
 
+/** Site version from <meta name="app-version"> (tools/bump_version.py); busts the 10-min Pages cache. */
+const APP_VERSION = document.querySelector('meta[name="app-version"]')?.content ?? '';
+export const withVersion = (url) => (APP_VERSION && APP_VERSION !== '0' ? `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(APP_VERSION)}` : url);
+
 const NONE_VALUES = new Set(['', '—', '-', '–', 'none', 'null', 'na', 'n/a', 'nan']);
 const str = (v) => String(v ?? '').trim();
 
@@ -202,7 +206,7 @@ function normalizeScore(row) {
 function parseCsv(url) {
   return new Promise((resolve, reject) => {
     if (!window.Papa) { reject(new Error('Papa Parse failed to load')); return; }
-    window.Papa.parse(url, {
+    window.Papa.parse(withVersion(url), {
       download: true,
       header: true,
       comments: '#',
@@ -265,7 +269,7 @@ export async function loadAll(base = 'data/') {
  */
 export async function loadLimits(url = 'data/limits.json') {
   try {
-    const res = await fetch(url);
+    const res = await fetch(withVersion(url));
     if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
     return await res.json();
   } catch (err) {

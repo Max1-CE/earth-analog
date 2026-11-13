@@ -37,6 +37,7 @@ assets/textures/      globe textures (earth, mars, moon; sources in TODO.md)
 analysis/metrics.py   computes scores.csv and ranking.csv from sites.csv
 analysis/CHANGES.md   what the data contains and what is still unverified
 TODO.md               data errors / contradictions found, to be fixed by the team
+tools/bump_version.py cache-busting version for index.html (run before each push)
 ```
 
 The site never computes similarity itself: after editing `data/sites.csv`, run
@@ -44,6 +45,18 @@ The site never computes similarity itself: after editing `data/sites.csv`, run
 ```sh
 python analysis/metrics.py   # rewrites data/scores.csv and data/ranking.csv
 ```
+
+## Before each push: bump the version
+
+GitHub Pages lets browsers cache files for 10 minutes, so right after a deploy a
+browser may mix a new `index.html` with old scripts. Run
+
+```sh
+python tools/bump_version.py   # new ?v=<timestamp> for CSS, every JS module (import map) and the data files
+```
+
+and commit `index.html` together with your changes. A new module in `js/` is picked up
+automatically the next time the script runs.
 
 ## Where to change things
 
