@@ -121,3 +121,16 @@
 | `data/sites.csv`, `toxic_salts_uk` | «перхлорати так/ні» на інфографіці визначається пошуком слова «перхлорат» у вільному тексті (і виключенням «не перхлорат») | краще додати окрему колонку `perchlorates` (yes / no / порожньо) |
 | `data/sites.csv`, рядки 15–19, `toxic_salts_uk`, `wind_desc_uk` | Девон, Фосгейм, Містастін і весь Місяць — без даних | на інфографіці «no data» |
 | `data/sites.csv`, статуси | 69 значень ще мають статус test / estimate / check (test 36, estimate 27, check 6); повний список — у `CHECKS.md` | — |
+
+## 9. What-if: «Close the gap» (2026-11-14)
+
+`data/interventions.csv` + `analysis/what_if.py` → `data/what_if.csv`. Новий індекс рахує справжній `metrics.py`
+на копії даних; кожне втручання має прецедент і посилання (USGS, UCF CLASS, Icarus, NASA Glenn / JSC / NTRS, Aarhus).
+
+| файл, рядок | що вирішити | що зроблено |
+|---|---|---|
+| `data/interventions.csv`, колонка `effort` | **зусилля (1–3) — моє припущення**, не дані: field 1, кратерне поле 2 (вибухівка), partial 2, chamber і mechanical 3. Від нього залежить порядок `gain_per_effort` | `effort_status = assumption`; команді підтвердити або змінити |
+| `data/interventions.csv`, `mars_chamber` | джерела Aarhus суперечать: нижче −120 °C (2011) проти −50 °C (2024) | взято −120 °C, `status = check` |
+| `data/interventions.csv`, `crater_field` | кратери поля (до ~10 м) і кратери в метриці (кілометрові, Robbins) — різні масштаби | попередження показується разом із результатом |
+| `data/what_if.csv`, NAM-GRV → MARS-GALE | симулянт MGS-1 базальтовий, а порода Гейла — `sedimentary_clastic`: за матрицею порід приросту 0 | у рішення не включено, порода лишається «no field fix» |
+| `data/what_if.csv`, Місяць | рельєф, висота Сонця, середня температура не мають польових рішень; лід і температура — лише в камері | показано як «no field fix» / chamber (вимкнено за замовчуванням) |

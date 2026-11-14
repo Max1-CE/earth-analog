@@ -42,6 +42,8 @@ assets/textures/      globe textures (earth, mars, moon; sources in TODO.md)
 analysis/metrics.py   computes scores.csv and ranking.csv from sites.csv
 analysis/habitability.py  liquid-water window, solar power, body constants → data/habitability.csv + habitability_constants.json
 analysis/check_data.py    data consistency checks → CHECKS.md
+analysis/what_if.py       similarity after test-bed interventions (runs the real metrics.py on a copy) → data/what_if.csv
+data/interventions.csv    interventions for "Close the gap": class field / chamber / mechanical / partial, what they set, facility limits, effort, source
 data/raw/sites_life_2.xlsx  team source of the life columns (tools/import_life_xlsx.py)
 analysis/CHANGES.md   what the data contains and what is still unverified
 TODO.md               data errors / contradictions found, to be fixed by the team
@@ -58,7 +60,7 @@ python analysis/metrics.py   # rewrites data/scores.csv and data/ranking.csv
 ## Before each commit: recompute and check the data
 
 ```sh
-python analysis/habitability.py && python analysis/check_data.py
+python analysis/habitability.py && python analysis/what_if.py && python analysis/check_data.py
 ```
 
 `check_data.py` writes `CHECKS.md` and exits with an error if any check fails. The Moon pressure

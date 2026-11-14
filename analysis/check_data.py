@@ -216,6 +216,63 @@ check("Site HTML/JS has no hard-coded data values", not hits,
       "; ".join(hits[:10]) or f"searched {len(sentinels)} values in index.html, infographic.html, js/*.js"
       + (f"; ignored (colour/opacity): {', '.join(ignored)}" if ignored else ""))
 
+# ------------------------------------------------------------------ what-if (analysis/what_if.py)
+if (DATA / "what_if.csv").exists():
+    import what_if as wi  # noqa: E402
+
+    wif = read_csv("what_if.csv")
+    ivs = {i["intervention_id"]: i for i in read_csv("interventions.csv")}
+    defaults = [r for r in wif if r["intervention_id"] == "default"]
+    analog_ids = [s["site_id"] for s in sites if s["role"] == "analog"]
+
+    bad = [r["analog_id"] for r in defaults if r["reference_id"] != by_id[r["analog_id"]]["pair_id"]]
+    bad += [f"{a}: no default row" for a in analog_ids if a not in {r["analog_id"] for r in defaults}]
+    check("what_if.csv: every Earth analog has a default plan for its pair_id", not bad,
+          ", ".join(bad) or f"{len(defaults)} analogs")
+
+    bad = []
+    for r in wif:
+        if r["in_default"] != "true" or r["intervention_id"] == "default":
+            continue
+        if r["class"] != "field":
+            bad.append(f"{r['analog_id']}: {r['intervention_id']} is {r['class']}")
+        if not r["weak_criteria"]:
+            bad.append(f"{r['analog_id']}: {r['intervention_id']} touches no criterion < {wi.THRESHOLD}")
+    check(f"what_if.csv: default plan = field interventions for criteria < {wi.THRESHOLD} only", not bad, "; ".join(bad))
+
+    bad = []
+    for d in defaults:
+        plan = sorted((r for r in wif if r["analog_id"] == d["analog_id"] and r["in_default"] == "true"
+                       and r["intervention_id"] != "default"), key=lambda r: int(r["default_rank"]))
+        gpe = [num(r["gain_per_effort"]) for r in plan]
+        if gpe != sorted(gpe, reverse=True):
+            bad.append(f"{d['analog_id']}: not sorted by gain_per_effort")
+        last = num(plan[-1]["score_after_cumulative"]) if plan else num(d["score_before"])
+        if abs(last - num(d["score_after"])) >= METRIC_TOL:
+            bad.append(f"{d['analog_id']}: cumulative {last} vs default {d['score_after']}")
+    check("what_if.csv: plan order by gain_per_effort; last step = default score_after", not bad, "; ".join(bad))
+
+    # recompute everything with the real metrics.py and compare
+    fresh, _ = wi.compute()
+    key = lambda r: (r["analog_id"], r["intervention_id"])  # noqa: E731
+    fresh_by = {key(r): r for r in fresh}
+    bad = []
+    for r in wif:
+        f = fresh_by.get(key(r))
+        if f is None:
+            bad.append(f"{key(r)} missing after recompute")
+            continue
+        for col in ("score_before", "score_after", "score_after_cumulative"):
+            x, y = num(r[col]), num(f[col])
+            if (x is None) != (y is None) or (x is not None and abs(x - y) >= METRIC_TOL):
+                bad.append(f"{key(r)} {col}: {r[col]} vs {f[col]}")
+    check(f"what_if.csv: score_after reproduces with metrics.py (|Δ| < {METRIC_TOL})", not bad,
+          "; ".join(bad[:5]) or f"{len(wif)} rows")
+
+    already = [d["analog_id"] for d in defaults if not d["weak_criteria"]]
+    check("what_if.csv: analogs with no criterion < 0.5 (\"Already a close analog\")", True,
+          ", ".join(already) or "none in the current data")
+
 # ------------------------------------------------------------------ photos
 bad = [s["site_id"] for s in sites if s["photo_url"] and not (s["photo_author"] and s["photo_license"])]
 n = sum(1 for s in sites if s["photo_url"])
