@@ -245,7 +245,8 @@ lines = [
     "|---|---|---|",
 ]
 for name, ok, details in results:
-    lines.append(f"| {name} | {'OK' if ok else '**FAIL**'} | {details.replace('|', '/')} |")
+    cell = lambda t: t.replace("|", r"\|")  # keep '|' in |φ|, |Δ| from splitting the table
+    lines.append(f"| {cell(name)} | {'OK' if ok else '**FAIL**'} | {cell(details)} |")
 lines += [
     "",
     "## Values still marked test / estimate / check",
