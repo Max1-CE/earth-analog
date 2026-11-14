@@ -84,6 +84,8 @@ const DICT = {
     en: 'Globe textures: Earth — <a href="https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography" target="_blank" rel="noopener">NASA Visible Earth, Blue Marble</a> (Reto Stöckli, NASA GSFC); Moon — <a href="https://svs.gsfc.nasa.gov/4720" target="_blank" rel="noopener">NASA\'s Scientific Visualization Studio, CGI Moon Kit</a> (LRO LROC); Mars — Viking MDIM 2.1 colour mosaic, NASA/JPL/USGS, via <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">NASA Mars Trek</a>.',
     uk: 'Текстури глобусів: Земля — <a href="https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography" target="_blank" rel="noopener">NASA Visible Earth, Blue Marble</a> (Reto Stöckli, NASA GSFC); Місяць — <a href="https://svs.gsfc.nasa.gov/4720" target="_blank" rel="noopener">NASA\'s Scientific Visualization Studio, CGI Moon Kit</a> (LRO LROC); Марс — кольорова мозаїка Viking MDIM 2.1, NASA/JPL/USGS, через <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">NASA Mars Trek</a>.',
   },
+  'res.title': { en: 'Partner resources (CSA, ESA, JAXA)', uk: 'Партнерські ресурси (CSA, ESA, JAXA)' },
+  'res.use': { en: 'Could help with:', uk: 'Може знадобитися для:' },
   'status.file': {
     en: 'Could not load the CSV files from a local file. Serve the folder over HTTP, e.g. <code>python -m http.server 8000</code>, then open <code>http://localhost:8000</code>.',
     uk: 'CSV-файли не завантажуються з локального файлу. Запустіть сервер у теці, наприклад <code>python -m http.server 8000</code>, і відкрийте <code>http://localhost:8000</code>.',

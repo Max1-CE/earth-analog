@@ -581,6 +581,26 @@ async function downloadCard(id) {
 
 /* ------------------------------------------------------------------ */
 
+/** Partner resources (data/resources.json), English texts, collapsible block in the footer. */
+function renderResources(R) {
+  const el = $('#resources');
+  if (!el || !R) return;
+  el.innerHTML = `
+    <summary>Partner resources (CSA, ESA, JAXA)</summary>
+    <p class="resources__note">${esc(R.note.en)}</p>
+    <div class="resources__grid">${R.agencies.map((a) => `
+      <section class="resources__agency">
+        <h3>${esc(a.agency)} <span>${esc(a.name.en)}</span></h3>
+        <ul>${a.resources.map((r) => `
+          <li>
+            <a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>
+            <p>${esc(r.about.en)}</p>
+            <p class="resources__use"><strong>Could help with:</strong> ${esc(r.use.en)}</p>
+          </li>`).join('')}</ul>
+      </section>`).join('')}</div>`;
+  el.hidden = false;
+}
+
 async function init() {
   document.querySelectorAll('[data-png]').forEach((b) => b.addEventListener('click', () => downloadCard(b.dataset.png)));
   try {
@@ -590,6 +610,7 @@ async function init() {
       loadCsv('data/sites.csv'),
       loadJson('data/limits.json'),
     ]);
+    loadJson('data/resources.json').then(renderResources).catch((e) => console.warn('[infographic] resources not loaded', e));
     const names = Object.fromEntries(sites.map((s) => [s.site_id, s.name_en || s.site_id]));
     chartDefaults();
     hero(H, C);

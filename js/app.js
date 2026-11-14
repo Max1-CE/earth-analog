@@ -9,7 +9,7 @@
  *       Analysis tab → renderAnalysis() (js/charts.js).
  */
 import {
-  loadAll, loadLimits, BODIES, PARAMS, CRITERIA, SCENARIOS, statusInfo, sitesOnBody, references, analogsOf,
+  loadAll, loadLimits, loadJsonOptional, BODIES, PARAMS, CRITERIA, SCENARIOS, statusInfo, sitesOnBody, references, analogsOf,
   formatCoords, formatValue,
 } from './data.js';
 import { MapView, mapKeyFor, projectionControl } from './maps.js';
@@ -30,6 +30,7 @@ const state = {
   scenario: 'auto',       // 'auto' | key of SCENARIOS
   sites: [],
   book: null,             // ScoreBook
+  resources: null,       // data/resources.json (partner resources, footer)
   limitsByLang: {},       // {en: data/limits.json, uk: data/limits_uk.json}; either may be missing
   selected: null,         // Site shown in the sidebar
   referenceId: null,      // reference used for the selected analog (null = its pair)
@@ -867,6 +868,7 @@ function showStatus(html) {
 
 /** Language switch: redraw everything that holds text. Maps are rebuilt (legends, controls). */
 function relocalize() {
+  renderResources();
   for (const k of Object.keys(singleMaps)) { singleMaps[k]?.destroy(); delete singleMaps[k]; }
   compareMaps.earth?.destroy();
   compareMaps.target?.destroy();
@@ -877,13 +879,37 @@ function relocalize() {
   if (state.selected && state.view !== 'globe') renderSidebar(state.selected);
 }
 
+/** Partner resources (data/resources.json) in a collapsible block above the footer credits. */
+function renderResources() {
+  const el = $('#resources');
+  const R = state.resources;
+  if (!el || !R) { if (el) el.hidden = true; return; }
+  const lang = getLang();
+  const L = (o) => o?.[lang] ?? o?.en ?? '';
+  el.innerHTML = `
+    <summary>${escapeHtml(t('res.title'))}</summary>
+    <p class="resources__note">${escapeHtml(L(R.note))}</p>
+    <div class="resources__grid">${R.agencies.map((a) => `
+      <section class="resources__agency">
+        <h3>${escapeHtml(a.agency)} <span>${escapeHtml(L(a.name))}</span></h3>
+        <ul>${a.resources.map((r) => `
+          <li>
+            <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>
+            <p>${escapeHtml(L(r.about))}</p>
+            <p class="resources__use"><strong>${escapeHtml(t('res.use'))}</strong> ${escapeHtml(L(r.use))}</p>
+          </li>`).join('')}</ul>
+      </section>`).join('')}</div>`;
+  el.hidden = false;
+}
+
 async function init() {
   applyStatic();
   onLangChange(relocalize);
   $$('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
   bindEvents();
   try {
-    const [data, limitsEn, limitsUk] = await Promise.all([loadAll('data/'), loadLimits('data/limits.json'), loadLimits('data/limits_uk.json')]);
+    const [data, limitsEn, limitsUk, resources] = await Promise.all([loadAll('data/'), loadLimits('data/limits.json'), loadLimits('data/limits_uk.json'), loadJsonOptional('data/resources.json')]);
+    state.resources = resources;
     state.sites = data.sites;
     state.book = new ScoreBook(data);
     state.limitsByLang = { en: limitsEn, uk: limitsUk };
@@ -892,6 +918,7 @@ async function init() {
     const fileProto = location.protocol === 'file:';
     showStatus(fileProto ? t('status.file') : escapeHtml(t('status.error', { e: err.message || err })));
   }
+  renderResources();
   const { site: siteId, popup: popupId, focus: focusId, group: groupId, globeMode } = readHash();
   if (!WEBGL) $('.tab[data-tab="globe"]').hidden = true;
   render();

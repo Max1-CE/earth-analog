@@ -300,13 +300,18 @@ export async function loadAll(base = 'data/') {
  * Optional: if the file is missing, the site works without the limits sections.
  * @returns {Promise<{mars: object, moon: object}|null>}
  */
-export async function loadLimits(url = 'data/limits.json') {
+export function loadLimits(url = 'data/limits.json') {
+  return loadJsonOptional(url);
+}
+
+/** Fetch a JSON file; null (and a console warning) if it is missing or broken. */
+export async function loadJsonOptional(url) {
   try {
     const res = await fetch(withVersion(url));
     if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
     return await res.json();
   } catch (err) {
-    console.warn('[data] limits not loaded', err);
+    console.warn(`[data] ${url} not loaded`, err);
     return null;
   }
 }

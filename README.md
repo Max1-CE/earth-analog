@@ -35,6 +35,7 @@ data/rock_similarity.csv  rock-class similarity matrix
 data/scores.csv       similarity of every analog with every reference (generated)
 data/ranking.csv      analogs ranked per reference (generated)
 data/limits.json      team file "Limits of the analogy" (factors, mitigations with criteria links, good_at, conclusion)
+data/resources.json   partner resources (CSA, ESA, JAXA) shown in the footer of both pages; texts en/uk, edit freely
 data/limits_uk.json   Ukrainian translation of limits.json (wording from the PDFs), shown in UA mode
 docs/limits_mars.pdf, docs/limits_moon.pdf   Ukrainian originals of the limits documents
 assets/textures/      globe textures (earth, mars, moon; sources in TODO.md)

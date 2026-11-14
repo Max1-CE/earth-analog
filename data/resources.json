@@ -1,0 +1,98 @@
+{
+  "note": {
+    "en": "Partner resources of the NASA Space Apps challenge. Not used in the current data yet; the notes say which of our values they could replace.",
+    "uk": "Партнерські ресурси завдання NASA Space Apps. У поточних даних ще не використані; у примітках сказано, які наші значення вони можуть замінити."
+  },
+  "agencies": [
+    {
+      "agency": "CSA",
+      "name": { "en": "Canadian Space Agency", "uk": "Канадське космічне агентство" },
+      "resources": [
+        {
+          "title": "RADARSAT Constellation Mission (RCM) — Data",
+          "url": "https://donnees-data.asc-csa.gc.ca/en/dataset/rcm",
+          "about": {
+            "en": "Three radar satellites that image Earth day or night in any weather: sea ice and surface wind, disasters, ecosystems.",
+            "uk": "Три радарні супутники, що знімають Землю вдень і вночі за будь-якої погоди: морський лід і вітер, катастрофи, екосистеми."
+          },
+          "use": {
+            "en": "Ice and permafrost at the Canadian Arctic sites (Devon, Ellesmere) and Mistastin; ice_water_frac there is still a test value.",
+            "uk": "Лід і мерзлота на канадських арктичних точках (Девон, Елсмір) і Містастіні; ice_water_frac там досі тестове значення."
+          }
+        },
+        {
+          "title": "RADARSAT-1 — Data",
+          "url": "https://donnees-data.asc-csa.gc.ca/en/dataset/radarsat1",
+          "about": {
+            "en": "Open archive of the first Canadian SAR satellite (launched 1995): images through cloud, smoke and polar night.",
+            "uk": "Відкритий архів першого канадського радарного супутника (запущено 1995 року): знімки крізь хмари, дим і полярну ніч."
+          },
+          "use": {
+            "en": "Long time series for the same Arctic sites; older scenes for comparison.",
+            "uk": "Довгі ряди знімків тих самих арктичних точок; старіші сцени для порівняння."
+          }
+        },
+        {
+          "title": "Synthetic Aperture Radar (SAR) Python Tutorial",
+          "url": "https://github.com/asc-csa/Synthetic_Aperture_Radar_Tutorial",
+          "about": {
+            "en": "Step-by-step Python and QGIS tutorial for opening and visualising SAR imagery.",
+            "uk": "Покроковий посібник із Python і QGIS: як відкрити й показати радарні знімки."
+          },
+          "use": {
+            "en": "Starting point for processing the RCM / RADARSAT-1 scenes above.",
+            "uk": "Точка старту для обробки сцен RCM / RADARSAT-1 вище."
+          }
+        }
+      ]
+    },
+    {
+      "agency": "ESA",
+      "name": { "en": "European Space Agency", "uk": "Європейське космічне агентство" },
+      "resources": [
+        {
+          "title": "Copernicus Data Space Ecosystem",
+          "url": "https://dataspace.copernicus.eu/",
+          "about": {
+            "en": "Free and open Sentinel data for land, ocean and atmosphere, with online viewing and processing tools.",
+            "uk": "Безкоштовні відкриті дані Sentinel про сушу, океан і атмосферу з онлайн-інструментами перегляду й обробки."
+          },
+          "use": {
+            "en": "Land surface temperature (Sentinel-3 SLSTR) for the Earth sites, whose temperatures are still test values; Sentinel-2 images of the sites.",
+            "uk": "Температура поверхні (Sentinel-3 SLSTR) для земних точок, де температури досі тестові; знімки точок із Sentinel-2."
+          }
+        },
+        {
+          "title": "ESA Open Science Catalog",
+          "url": "https://opensciencedata.esa.int/",
+          "about": {
+            "en": "Catalogue of open geoscience datasets, products, experiments and workflows.",
+            "uk": "Каталог відкритих наборів даних, продуктів, експериментів і робочих процесів із наук про Землю."
+          },
+          "use": {
+            "en": "Search for derived products (for example permafrost or land cover) for our sites.",
+            "uk": "Пошук готових продуктів (наприклад, мерзлота чи покриття поверхні) для наших точок."
+          }
+        }
+      ]
+    },
+    {
+      "agency": "JAXA",
+      "name": { "en": "Japan Aerospace Exploration Agency", "uk": "Японське агентство аерокосмічних досліджень" },
+      "resources": [
+        {
+          "title": "JAXA G-Portal",
+          "url": "https://gportal.jaxa.jp/gpr/index/index",
+          "about": {
+            "en": "Portal for JAXA Earth-observation satellite data (GCOM-C, GCOM-W, ALOS and others).",
+            "uk": "Портал даних японських супутників спостереження Землі (GCOM-C, GCOM-W, ALOS та інші)."
+          },
+          "use": {
+            "en": "Surface temperature (GCOM-C SGLI) and elevation for slope, relief and the altitude correction of pressure at the Earth sites.",
+            "uk": "Температура поверхні (GCOM-C SGLI) і висоти для схилів, рельєфу та поправки тиску на висоту для земних точок."
+          }
+        }
+      ]
+    }
+  ]
+}
