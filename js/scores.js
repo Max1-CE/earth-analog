@@ -8,21 +8,24 @@
  *   other   → that scenario for every reference (equal / moon_base / mars_landing).
  */
 import { CRITERIA, SCENARIOS, BODY_SCENARIO } from './data.js';
+import { t } from './i18n.js';
 
-export const SCENARIO_CHOICES = [
-  { key: 'auto', label: 'Auto (per body)' },
-  ...Object.entries(SCENARIOS).map(([key, s]) => ({ key, label: s.label })),
-];
+/** Scenario choices for the selects; labels follow the interface language. */
+export const SCENARIO_CHOICES = ['auto', ...Object.keys(SCENARIOS)].map((key) => ({
+  key,
+  get label() { return t(`scenario.${key}`); },
+}));
 
 /** A criterion "matches" when its similarity s is at least this value. */
 export const MATCH_THRESHOLD = 0.7;
 
 /** Qualitative bands for the UI (checked top-down). */
 export const SIMILARITY_LEVELS = [
-  { min: 0.8, key: 'high', label: 'High' },
-  { min: 0.6, key: 'moderate', label: 'Moderate' },
-  { min: 0, key: 'low', label: 'Low' },
+  { min: 0.8, key: 'high' },
+  { min: 0.6, key: 'moderate' },
+  { min: 0, key: 'low' },
 ];
+for (const l of SIMILARITY_LEVELS) Object.defineProperty(l, 'label', { get: () => t(`level.${l.key}`), enumerable: true });
 export function similarityLevel(score) {
   if (score === null || score === undefined) return null;
   return SIMILARITY_LEVELS.find((l) => score >= l.min) ?? null;

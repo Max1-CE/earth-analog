@@ -15,6 +15,8 @@
  * with prefers-reduced-motion both drop to 0.
  */
 
+import { t, pick, nSites } from './i18n.js';
+
 const Globe = window.Globe;
 
 /** Camera altitude (in globe radii) per state; smaller = closer. */
@@ -45,10 +47,10 @@ export const MARKER_COLORS = { mars: '#ff8a4c', moon: '#d7e2f0' };
  * Analogs not listed here stay single points.
  */
 export const GROUPS = [
-  { id: 'arctic', name: 'Devon & Ellesmere islands', region: 'Canadian High Arctic', members: ['DEV-HAU', 'DEV-PLT', 'ELL-FOS'] },
-  { id: 'mcmurdo', name: 'McMurdo Dry Valleys', region: 'Antarctica', members: ['MDV-TAY', 'MDV-WRI', 'MDV-DJP', 'MDV-BEA'] },
-  { id: 'mistastin', name: 'Mistastin Lake crater', region: 'Labrador, Canada', members: ['MIS-ANO', 'MIS-MLT'] },
-  { id: 'namib', name: 'Namib Desert', region: 'Namibia', members: ['NAM-DUN', 'NAM-RK', 'NAM-GRV'] },
+  { id: 'arctic', nameEn: 'Devon & Ellesmere islands', nameUk: 'Острови Девон і Елсмір', regionEn: 'Canadian High Arctic', regionUk: 'Канадська Арктика', members: ['DEV-HAU', 'DEV-PLT', 'ELL-FOS'] },
+  { id: 'mcmurdo', nameEn: 'McMurdo Dry Valleys', nameUk: 'Сухі долини Мак-Мердо', regionEn: 'Antarctica', regionUk: 'Антарктида', members: ['MDV-TAY', 'MDV-WRI', 'MDV-DJP', 'MDV-BEA'] },
+  { id: 'mistastin', nameEn: 'Mistastin Lake crater', nameUk: 'Кратер озера Містастін', regionEn: 'Labrador, Canada', regionUk: 'Лабрадор, Канада', members: ['MIS-ANO', 'MIS-MLT'] },
+  { id: 'namib', nameEn: 'Namib Desert', nameUk: 'Пустеля Наміб', regionEn: 'Namibia', regionUk: 'Намібія', members: ['NAM-DUN', 'NAM-RK', 'NAM-GRV'] },
 ];
 
 /** Fan-out geometry for an open group (degrees of arc, globe radii for altitude). */
@@ -101,7 +103,11 @@ export function buildGroups(analogs) {
     const spread = new Map(ordered.map(({ s }, i) => [s, destination(center, start + i * step, SPREAD.ringDeg)]));
     const bodies = new Set(members.map((s) => s.analog_of));
     const color = bodies.size === 1 ? MARKER_COLORS[[...bodies][0]] ?? '#ffffff' : '#ffffff';
-    groups.push({ ...cfg, members, lat: center.lat, lon: center.lon, color, spread });
+    groups.push({
+      ...cfg, members, lat: center.lat, lon: center.lon, color, spread,
+      get name() { return pick(cfg.nameEn, cfg.nameUk); },
+      get region() { return pick(cfg.regionEn, cfg.regionUk); },
+    });
   }
   return groups;
 }
@@ -304,7 +310,7 @@ export class GlobeStage {
     for (const g of this.groups) {
       if (g !== this.group) {
         const names = g.members.map((s) => `<br>· ${escapeHtml(s.name)}`).join('');
-        pts.push({ kind: 'group', group: g, lat: g.lat, lng: g.lon, color: g.color, radius: 1.05, label: `<strong>${escapeHtml(g.name)}</strong> · ${g.members.length} sites${names}` });
+        pts.push({ kind: 'group', group: g, lat: g.lat, lng: g.lon, color: g.color, radius: 1.05, label: `<strong>${escapeHtml(g.name)}</strong> · ${escapeHtml(nSites(g.members.length))}${names}` });
         rings.push({ lat: g.lat, lng: g.lon, color: g.color });
         continue;
       }
@@ -313,7 +319,7 @@ export class GlobeStage {
         const color = colorOf(s);
         const isFocused = s === this.focused;
         pts.push({ kind: 'site', site: s, lat: p.lat, lng: p.lon, color, radius: isFocused ? SPREAD.focusedRadius : SPREAD.memberRadius, label: escapeHtml(s.name) });
-        pts.push({ kind: 'anchor', site: s, lat: s.lat, lng: s.lon, color: '#ffffff', radius: SPREAD.anchorRadius, label: `${escapeHtml(s.name)} · exact location` });
+        pts.push({ kind: 'anchor', site: s, lat: s.lat, lng: s.lon, color: '#ffffff', radius: SPREAD.anchorRadius, label: escapeHtml(t('gl.exact', { name: s.name })) });
         paths.push({ path: [[s.lat, s.lon], [p.lat, p.lon]], color });
         if (isFocused || !this.focused) rings.push({ lat: p.lat, lng: p.lon, color });
       }
@@ -322,6 +328,19 @@ export class GlobeStage {
       .pointsData(pts)
       .pathsData(paths)
       .ringsData(reducedMotion() ? [] : rings);
+  }
+
+  /** Redraw everything that shows text after a language switch (markers, card). */
+  relocalize() {
+    this.renderEarthMarkers();
+    if (this.mode === 'group' && this.group) this.card.innerHTML = this.hooks.groupCardHtml(this.group);
+    else if (this.focused) this.card.innerHTML = this.hooks.cardHtml(this.focused, this.group);
+    if (this.mode === 'compare' && this.reference) {
+      const refs = this.hooks.references.filter((r) => r.body === this.targetBody);
+      const color = MARKER_COLORS[this.targetBody];
+      this.target.pointsData(refs.map((r) => ({ site: r, lat: r.lat, lng: r.lon, color, radius: r === this.reference ? 1.1 : 0.6, label: escapeHtml(r.name) })));
+      this.hooks.onCompare(this.focused, this.reference);
+    }
   }
 
   /** Where the camera looks at a site: its fanned-out spot if it belongs to the open group. */

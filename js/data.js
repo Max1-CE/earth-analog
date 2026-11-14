@@ -12,14 +12,19 @@
  *   - CRITERIA:  the 8 similarity criteria s_* in scores.csv
  *   - SCENARIOS: weighting scenarios (must mirror SCENARIOS in analysis/metrics.py)
  *   - STATUS:    how status_* values are shown
+ *
+ * Labels shown in the UI are getters over js/i18n.js, so they follow the language switch.
  */
+import { t, pick } from './i18n.js';
 
 /** @typedef {'earth'|'mars'|'moon'} Body */
 
 /**
  * @typedef {Object} Site
  * @property {string} id            site_id
- * @property {string} name          name_en
+ * @property {string} name          name_uk or name_en, by interface language (getter)
+ * @property {string} nameAlt       the other-language name (getter)
+ * @property {string} nameEn        name_en
  * @property {string} nameUk        name_uk
  * @property {Body} body
  * @property {'reference'|'analog'} role
@@ -27,37 +32,52 @@
  * @property {Body|null} analog_of  analogs: body of their paired reference
  * @property {number} lat
  * @property {number} lon
- * @property {string} region
- * @property {string} description   desc_en
- * @property {string} limits        limits_en
+ * @property {string} region        region (English in the CSV; translated via i18n, getter)
+ * @property {string} description   desc_uk / desc_en (getter)
+ * @property {string} limits        limits_uk / limits_en (getter)
  * @property {{img:string, page:string, author:string, license:string}|null} photo
  * @property {Object<string, number|string|null>} values  raw columns keyed by PARAMS[].key
  * @property {Object<string, string>} status              status_* columns without the prefix
  */
 
 export const BODIES = {
-  earth: { label: 'Earth', short: 'Earth' },
-  mars: { label: 'Mars', short: 'Mars' },
-  moon: { label: 'Moon (South Pole)', short: 'Moon' },
+  earth: {},
+  mars: {},
+  moon: {},
 };
+for (const [key, b] of Object.entries(BODIES)) {
+  Object.defineProperties(b, {
+    label: { get: () => t(`bodyLong.${key}`), enumerable: true },
+    short: { get: () => t(`body.${key}`), enumerable: true },
+  });
+}
+
+/** Make `label` (and optionally other fields) follow the interface language. */
+function localize(list, prefix) {
+  for (const item of list) {
+    Object.defineProperty(item, 'label', { get: () => t(`${prefix}.${item.key}`), enumerable: true, configurable: true });
+  }
+}
 
 /**
  * Raw parameters as shown in the sidebar. `status` = suffix of the status_*
  * column that describes the value (null = the CSV has no status for it).
  */
 export const PARAMS = [
-  { key: 't_surf_min_c',          label: 'Surface temperature, min',  unit: '°C',        digits: 1, status: 'temp' },
-  { key: 't_surf_mean_c',         label: 'Surface temperature, mean', unit: '°C',        digits: 1, status: 'temp' },
-  { key: 't_surf_max_c',          label: 'Surface temperature, max',  unit: '°C',        digits: 1, status: 'temp' },
-  { key: 'crater_density_1e6km2', label: 'Crater density',            unit: '/10⁶ km²',  digits: 0, status: 'craters' },
-  { key: 'slope_mean_deg',        label: 'Mean slope',                unit: '°',         digits: 1, status: 'slope' },
-  { key: 'relief_m',              label: 'Relief',                    unit: 'm',         digits: 0, status: null },
-  { key: 'ice_water_frac',        label: 'Water ice fraction',        unit: '',          digits: 3, status: 'ice' },
-  { key: 'aridity_ai',            label: 'Aridity index',             unit: '',          digits: 2, status: null },
-  { key: 'rock_class',            label: 'Rock class',                unit: '',          text: true, status: 'rock' },
-  { key: 'sun_elev_max_deg',      label: 'Max solar elevation',       unit: '°',         digits: 2, status: 'sun' },
-  { key: 'sun_elev_min_deg',      label: 'Min solar elevation',       unit: '°',         digits: 2, status: 'sun' },
+  { key: 't_surf_min_c', unit: '°C',        digits: 1, status: 'temp' },
+  { key: 't_surf_mean_c', unit: '°C',        digits: 1, status: 'temp' },
+  { key: 't_surf_max_c', unit: '°C',        digits: 1, status: 'temp' },
+  { key: 'crater_density_1e6km2', unitKey: 'unit.km2',  digits: 0, status: 'craters' },
+  { key: 'slope_mean_deg', unit: '°',         digits: 1, status: 'slope' },
+  { key: 'relief_m', unitKey: 'unit.m',    digits: 0, status: null },
+  { key: 'ice_water_frac', unit: '',          digits: 3, status: 'ice' },
+  { key: 'aridity_ai', unit: '',          digits: 2, status: null },
+  { key: 'rock_class', unit: '',          text: true, status: 'rock' },
+  { key: 'sun_elev_max_deg', unit: '°',         digits: 2, status: 'sun' },
+  { key: 'sun_elev_min_deg', unit: '°',         digits: 2, status: 'sun' },
 ];
+localize(PARAMS, 'param');
+for (const p of PARAMS) if (p.unitKey) Object.defineProperty(p, 'unit', { get: () => t(p.unitKey), enumerable: true });
 export const PARAM = Object.fromEntries(PARAMS.map((p) => [p.key, p]));
 
 /**
@@ -66,15 +86,16 @@ export const PARAM = Object.fromEntries(PARAMS.map((p) => [p.key, p]));
  * reference (for the "How to close the gap" advice).
  */
 export const CRITERIA = [
-  { key: 'temp_mean',  label: 'Mean temperature',  short: 'T mean',   raw: (s) => s.values.t_surf_mean_c,  status: 'temp' },
-  { key: 'temp_range', label: 'Temperature range', short: 'T range',  raw: (s) => diff(s.values.t_surf_max_c, s.values.t_surf_min_c), status: 'temp' },
-  { key: 'craters',    label: 'Crater density',    short: 'Craters',  raw: (s) => s.values.crater_density_1e6km2, status: 'craters' },
-  { key: 'slope',      label: 'Slope',             short: 'Slope',    raw: (s) => s.values.slope_mean_deg, status: 'slope' },
-  { key: 'relief',     label: 'Relief',            short: 'Relief',   raw: (s) => s.values.relief_m,       status: null },
-  { key: 'ice',        label: 'Water ice',         short: 'Ice',      raw: (s) => s.values.ice_water_frac, status: 'ice' },
-  { key: 'sun',        label: 'Solar elevation',   short: 'Sun',      raw: (s) => s.values.sun_elev_max_deg, status: 'sun' },
-  { key: 'rock',       label: 'Rock type',         short: 'Rock',     raw: () => null,                     status: 'rock' },
+  { key: 'temp_mean', short: 'T mean',   raw: (s) => s.values.t_surf_mean_c,  status: 'temp' },
+  { key: 'temp_range', short: 'T range',  raw: (s) => diff(s.values.t_surf_max_c, s.values.t_surf_min_c), status: 'temp' },
+  { key: 'craters', short: 'Craters',  raw: (s) => s.values.crater_density_1e6km2, status: 'craters' },
+  { key: 'slope', short: 'Slope',    raw: (s) => s.values.slope_mean_deg, status: 'slope' },
+  { key: 'relief', short: 'Relief',   raw: (s) => s.values.relief_m,       status: null },
+  { key: 'ice', short: 'Ice',      raw: (s) => s.values.ice_water_frac, status: 'ice' },
+  { key: 'sun', short: 'Sun',      raw: (s) => s.values.sun_elev_max_deg, status: 'sun' },
+  { key: 'rock', short: 'Rock',     raw: () => null,                     status: 'rock' },
 ];
+localize(CRITERIA, 'crit');
 function diff(a, b) { return a === null || b === null ? null : a - b; }
 
 /**
@@ -83,10 +104,11 @@ function diff(a, b) { return a === null || b === null ? null : a - b; }
  * from scores.csv, and loadAll() warns if they disagree with these weights.
  */
 export const SCENARIOS = {
-  equal:        { label: 'Equal weights', weights: { temp_mean: 1, temp_range: 0.5, craters: 1, slope: 1, relief: 1, ice: 1, sun: 1, rock: 1 } },
-  moon_base:    { label: 'Moon base',     weights: { temp_mean: 1, temp_range: 1, craters: 1, slope: 1, relief: 0.5, ice: 3, sun: 3, rock: 1 } },
-  mars_landing: { label: 'Mars landing',  weights: { temp_mean: 1, temp_range: 0.5, craters: 1, slope: 3, relief: 2, ice: 1, sun: 0.5, rock: 2 } },
+  equal: { weights: { temp_mean: 1, temp_range: 0.5, craters: 1, slope: 1, relief: 1, ice: 1, sun: 1, rock: 1 } },
+  moon_base: { weights: { temp_mean: 1, temp_range: 1, craters: 1, slope: 1, relief: 0.5, ice: 3, sun: 3, rock: 1 } },
+  mars_landing: { weights: { temp_mean: 1, temp_range: 0.5, craters: 1, slope: 3, relief: 2, ice: 1, sun: 0.5, rock: 2 } },
 };
+for (const [key, sc] of Object.entries(SCENARIOS)) Object.defineProperty(sc, 'label', { get: () => t(`scenario.${key}`), enumerable: true });
 /** Scenario used for each reference body in ranking.csv (TARGET_SCENARIO in metrics.py). */
 export const BODY_SCENARIO = { mars: 'mars_landing', moon: 'moon_base' };
 
@@ -95,18 +117,18 @@ export const BODY_SCENARIO = { mars: 'mars_landing', moon: 'moon_base' };
  * (test, estimate_*, unknown) = grey placeholder.
  */
 const STATUS_KINDS = {
-  literature: { kind: 'literature', label: 'Literature', tip: 'Value from published literature' },
-  computed: { kind: 'computed', label: 'Computed', tip: 'Computed from coordinates / formula' },
-  topographic_shadow: { kind: 'computed', label: 'Computed', tip: 'Computed: permanently shadowed by crater walls (max solar elevation set to 0°)' },
+  literature: { kind: 'literature', label: 'status.literature', tip: 'status.literatureTip' },
+  computed: { kind: 'computed', label: 'status.computed', tip: 'status.computedTip' },
+  topographic_shadow: { kind: 'computed', label: 'status.computed', tip: 'status.shadowTip' },
 };
-const PLACEHOLDER = 'placeholder value, not yet verified';
 
 /** @returns {{kind:'literature'|'computed'|'placeholder', label:string, tip:string}|null} */
 export function statusInfo(code) {
   if (!code) return null;
-  if (STATUS_KINDS[code]) return STATUS_KINDS[code];
+  const known = STATUS_KINDS[code];
+  if (known) return { kind: known.kind, label: t(known.label), tip: t(known.tip) };
   const detail = code === 'test' ? '' : ` (${code.replace(/_/g, ' ')})`;
-  return { kind: 'placeholder', label: code.startsWith('estimate') ? 'Estimate' : 'Test', tip: PLACEHOLDER + detail };
+  return { kind: 'placeholder', label: t(code.startsWith('estimate') ? 'status.estimate' : 'status.test'), tip: t('status.placeholder') + detail };
 }
 
 /* ------------------------------------------------------------------ */
@@ -167,17 +189,24 @@ function normalizeSite(row, index) {
 
   return {
     id,
-    name: str(row.name_en) || id,
+    nameEn: str(row.name_en) || id,
     nameUk: str(row.name_uk),
+    get name() { return pick(this.nameEn, this.nameUk); },
+    get nameAlt() { const n = pick(this.nameUk, this.nameEn); return n === this.name ? '' : n; },
     body,
     role: str(row.role) === 'reference' ? 'reference' : 'analog',
     pairId: str(row.pair_id) || null,
     analog_of: null, // filled in loadAll() from the paired reference
     lat,
     lon,
-    region: str(row.region),
-    description: str(row.desc_en),
-    limits: str(row.limits_en),
+    regionEn: str(row.region),
+    get region() { return this.regionEn ? t(`region.${this.regionEn}`) : ''; },
+    descEn: str(row.desc_en),
+    descUk: str(row.desc_uk),
+    get description() { return pick(this.descEn, this.descUk); },
+    limitsEn: str(row.limits_en),
+    limitsUk: str(row.limits_uk),
+    get limits() { return pick(this.limitsEn, this.limitsUk); },
     photo: photoFrom(row),
     values,
     status,
@@ -263,7 +292,8 @@ export async function loadAll(base = 'data/') {
 }
 
 /**
- * "Limits of the analogy" (data/limits.json, English version of docs/limits_*.pdf).
+ * "Limits of the analogy" (data/limits.json, English version of docs/limits_*.pdf;
+ * data/limits_uk.json is its Ukrainian translation, checked by tools/check_limits_uk.py).
  * Optional: if the file is missing, the site works without the limits sections.
  * @returns {Promise<{mars: object, moon: object}|null>}
  */
@@ -292,13 +322,18 @@ export const analogsOf = (sites, target) =>
 
 /** Format lat/lon as "24.00° S, 15.00° E". */
 export function formatCoords(lat, lon, digits = 2) {
-  const ns = lat >= 0 ? 'N' : 'S';
-  const ew = lon >= 0 ? 'E' : 'W';
+  const ns = t(lat >= 0 ? 'coord.N' : 'coord.S');
+  const ew = t(lon >= 0 ? 'coord.E' : 'coord.W');
   return `${Math.abs(lat).toFixed(digits)}° ${ns}, ${Math.abs(lon).toFixed(digits)}° ${ew}`;
 }
 
-/** "glacial_till" → "glacial till" */
-export const prettyRock = (v) => (v ? String(v).replace(/_/g, ' ') : '—');
+/** "glacial_till" → "glacial till" / "льодовикова морена" (unknown classes: underscores → spaces) */
+export const prettyRock = (v) => {
+  if (!v) return '—';
+  const key = `rock.${v}`;
+  const s = t(key);
+  return s === key ? String(v).replace(/_/g, ' ') : s;
+};
 
 export function formatValue(param, value) {
   if (value === null || value === undefined) return '—';

@@ -27,17 +27,20 @@ js/maps.js            BODY_MAPS config (CRS, tiles), MapView class, markers, gri
 js/data.js            CSV loading; PARAMS, CRITERIA, SCENARIOS (mirror of metrics.py), status badges
 js/scores.js          ScoreBook: queries over scores.csv / ranking.csv; per-criterion breakdown
 js/charts.js          Chart.js charts: ranking, radar, heat map, raw parameters; PNG export
+js/i18n.js            interface language EN / UA: dictionary, t(), language switch
 data/sites.csv        the single source of site data (18 rows: references + Earth analogs)
 data/rock_similarity.csv  rock-class similarity matrix
 data/scores.csv       similarity of every analog with every reference (generated)
 data/ranking.csv      analogs ranked per reference (generated)
 data/limits.json      team file "Limits of the analogy" (factors, mitigations with criteria links, good_at, conclusion)
+data/limits_uk.json   Ukrainian translation of limits.json (wording from the PDFs), shown in UA mode
 docs/limits_mars.pdf, docs/limits_moon.pdf   Ukrainian originals of the limits documents
 assets/textures/      globe textures (earth, mars, moon; sources in TODO.md)
 analysis/metrics.py   computes scores.csv and ranking.csv from sites.csv
 analysis/CHANGES.md   what the data contains and what is still unverified
 TODO.md               data errors / contradictions found, to be fixed by the team
 tools/bump_version.py cache-busting version for index.html (run before each push)
+tools/check_limits_uk.py  checks limits_uk.json has the same structure and numbers as limits.json
 ```
 
 The site never computes similarity itself: after editing `data/sites.csv`, run
@@ -81,6 +84,9 @@ automatically the next time the script runs.
 | Globe textures | `TEXTURES` in `js/globe.js` (falls back to a plain sphere if a file is missing) |
 | Globe deep links | `#view=globe&focus=<site_id>` (card open), `&g=compare` (comparison), `#view=globe&group=<id>` (close sites fanned out: arctic, mcmurdo, mistastin, namib — `GROUPS` in `js/globe.js`) |
 | Sidebar content | `renderSidebar()` and helpers in `js/app.js` |
+| Interface language | switch UA / EN in the header; start-up order: URL `&lang=uk|en` → last choice (localStorage) → browser language. All UI texts live in `DICT` in `js/i18n.js` (one entry with `en` and `uk` per key); static page text is tagged `data-i18n` / `data-i18n-html` / `data-i18n-attr` in `index.html` |
+| Site names / texts per language | `name_en` / `name_uk`, `desc_en` / `desc_uk`, `limits_en` / `limits_uk` in `data/sites.csv`; `region` is English only and translated by the `region.*` keys in `js/i18n.js` |
+| Limits texts in Ukrainian | `data/limits_uk.json`: after any change to `limits.json`, update it and run `python tools/check_limits_uk.py` |
 
 Screenshot tests: headless Chrome with `--force-prefers-reduced-motion` (charts and CSS
 transitions then render without animation); globes need `--use-angle=swiftshader --enable-unsafe-swiftshader`.

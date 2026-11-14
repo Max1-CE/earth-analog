@@ -13,6 +13,7 @@ import { MapView, mapKeyFor, projectionControl } from './maps.js';
 import { ScoreBook, SCENARIO_CHOICES, breakdown, similarityLevel, MATCH_THRESHOLD } from './scores.js';
 import { rankingChart, radarChart, heatmapChart, rawCharts, downloadPng, destroyAll, RAW_GROUPS } from './charts.js';
 import { GlobeStage, hasWebGL } from './globe.js';
+import { t, getLang, setLang, onLangChange, applyStatic, nSites, LANGS } from './i18n.js';
 
 const VIEWS = ['globe', 'earth', 'mars', 'moon', 'compare', 'analysis'];
 const MAP_VIEWS = ['earth', 'mars', 'moon', 'compare'];
@@ -26,7 +27,7 @@ const state = {
   scenario: 'auto',       // 'auto' | key of SCENARIOS
   sites: [],
   book: null,             // ScoreBook
-  limits: null,           // data/limits.json ({mars, moon}) or null
+  limitsByLang: {},       // {en: data/limits.json, uk: data/limits_uk.json}; either may be missing
   selected: null,         // Site shown in the sidebar
   referenceId: null,      // reference used for the selected analog (null = its pair)
   analysis: { referenceId: null, analogId: null }, // Analysis view selection
@@ -40,6 +41,8 @@ const compareMaps = { earth: null, target: null };
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const byId = (id) => state.sites.find((s) => s.id === id) ?? null;
+/** "Limits of the analogy" in the interface language (falls back to English). */
+const limitsData = () => state.limitsByLang[getLang()] ?? state.limitsByLang.en ?? null;
 
 /* ------------------------------------------------------------------ */
 /* Theme                                                               */
@@ -180,34 +183,34 @@ const scenarioName = (key) => SCENARIOS[key]?.label ?? key;
 function statusBadge(code) {
   const st = statusInfo(code);
   if (!st) return '';
-  const letter = st.kind === 'literature' ? 'L' : st.kind === 'computed' ? 'C' : st.label === 'Estimate' ? 'E' : 'T';
+  const letter = st.kind === 'literature' ? 'L' : st.kind === 'computed' ? 'C' : code.startsWith('estimate') ? 'E' : 'T';
   return `<span class="st st--${st.kind}" title="${escapeHtml(`${st.label}: ${st.tip}`)}" aria-label="${escapeHtml(`${st.label}: ${st.tip}`)}">${letter}</span>`;
 }
 
 function siteBadge(site) {
-  if (site.role === 'analog') return site.analog_of ? `Earth · ${BODIES[site.analog_of].short} analog` : 'Earth site';
-  return `${BODIES[site.body].label} · reference`;
+  if (site.role === 'analog') return site.analog_of ? t(`site.analogBadge.${site.analog_of}`) : t('site.earthSite');
+  return t(`site.refBadge.${site.body}`);
 }
 
 /** Photo block with author + licence, linked to the Commons file page. */
 function photoBlock(site, cls = 'photo') {
   const p = site.photo;
-  if (!p) return `<div class="${cls} ${cls}--empty" role="img" aria-label="No photo yet">Photo coming soon</div>`;
-  const credit = [p.author, p.license].filter(Boolean).map(escapeHtml).join(' · ') || 'Photo source';
+  if (!p) return `<div class="${cls} ${cls}--empty" role="img" aria-label="${escapeHtml(t('photo.none'))}">${escapeHtml(t('photo.soon'))}</div>`;
+  const credit = [p.author, p.license].filter(Boolean).map(escapeHtml).join(' · ') || escapeHtml(t('photo.source'));
   return `
     <figure class="${cls}">
       <img src="${escapeHtml(p.img)}" alt="${escapeHtml(site.name)}" loading="lazy" decoding="async"
-           onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'photo-missing',textContent:'Photo unavailable'}))">
-      <figcaption>Photo: <a href="${escapeHtml(p.page)}" target="_blank" rel="noopener">${credit}</a></figcaption>
+           onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'photo-missing',textContent:${escapeHtml(JSON.stringify(t('photo.unavailable')))}}))">
+      <figcaption>${escapeHtml(t('photo.prefix'))} <a href="${escapeHtml(p.page)}" target="_blank" rel="noopener">${credit}</a></figcaption>
     </figure>`;
 }
 
 function analogLine(site) {
   if (site.role === 'analog') {
     const ref = byId(site.pairId);
-    return ref ? `Analog of: <strong>${escapeHtml(ref.name)}</strong> (${escapeHtml(BODIES[ref.body].short)})` : 'Earth site';
+    return ref ? t('pop.analogOfHtml', { name: escapeHtml(ref.name), body: escapeHtml(BODIES[ref.body].short) }) : escapeHtml(t('site.earthSite'));
   }
-  return `Reference site on <strong>${escapeHtml(BODIES[site.body].short)}</strong>`;
+  return t(`pop.refOnHtml.${site.body}`);
 }
 
 /** Mini-window shown when a marker is clicked (inherits the map pane's theme). */
@@ -222,12 +225,12 @@ function sitePopup(site) {
     <div class="popup__body">
       ${photoBlock(site, 'popup__photo')}
       ${site.description ? `<p class="popup__desc">${escapeHtml(site.description)}</p>` : ''}
-      ${site.limits ? `<p class="popup__limits"><strong>Limits:</strong> ${escapeHtml(site.limits)}</p>` : ''}
+      ${site.limits ? `<p class="popup__limits"><strong>${escapeHtml(t('pop.limits'))}</strong> ${escapeHtml(site.limits)}</p>` : ''}
     </div>
     <footer class="popup__foot">
       <p class="popup__analog">${analogLine(site)}</p>
       <p class="popup__coords">${formatCoords(site.lat, site.lon)}</p>
-      <button type="button" class="popup__btn" data-action="details">More details</button>
+      <button type="button" class="popup__btn" data-action="details">${escapeHtml(t('pop.more'))}</button>
     </footer>`;
   return el;
 }
@@ -252,7 +255,7 @@ function closeSidebar() {
 function scenarioSelect(id) {
   return `
     <label class="field field--inline">
-      <span class="field__label">Scenario</span>
+      <span class="field__label">${escapeHtml(t('sb.scenario'))}</span>
       <select id="${id}" data-scenario-select>
         ${SCENARIO_CHOICES.map((c) => `<option value="${c.key}"${c.key === state.scenario ? ' selected' : ''}>${escapeHtml(c.label)}</option>`).join('')}
       </select>
@@ -265,17 +268,17 @@ function indexCard(row, refName, isPair) {
   return `
     <div class="index-card">
       <div class="index-card__head">
-        <span class="index-card__label">Similarity score <span class="st st--computed" title="Computed by analysis/metrics.py (scores.csv)">C</span></span>
+        <span class="index-card__label">${escapeHtml(t('sb.score'))} <span class="st st--computed" title="${escapeHtml(t('sb.computedTip'))}">C</span></span>
         <span class="index-card__score">
           ${level ? `<span class="level level--${level.key}">${level.label}</span>` : ''}
           <span class="index-card__value">${fmtScore(row?.score)}</span>
         </span>
       </div>
       <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="1" aria-valuenow="${row?.score ?? 0}"
-           aria-label="Similarity score"><span style="width:${pct}%"></span></div>
+           aria-label="${escapeHtml(t('sb.score'))}"><span style="width:${pct}%"></span></div>
       <p class="index-card__ref">
-        vs <strong>${escapeHtml(refName)}</strong>${isPair ? ' (intended pair)' : ''}
-        ${row ? `· ${escapeHtml(scenarioName(row.scenario))} · coverage ${fmtScore(row.coverage)}` : ''}
+        ${t('sb.vsHtml', { ref: escapeHtml(refName) })}${isPair ? escapeHtml(t('sb.intendedPair')) : ''}
+        ${row ? `· ${escapeHtml(scenarioName(row.scenario))} · ${escapeHtml(t('sb.coverage', { v: fmtScore(row.coverage) }))}` : ''}
       </p>
     </div>`;
 }
@@ -286,7 +289,7 @@ function rankRows(items, { active, attr }) {
     return `
       <li>
         <button type="button" class="rank" ${attr}="${escapeHtml(r.id)}" aria-pressed="${r.id === active}">
-          <span class="rank__name">${escapeHtml(r.name)}${r.isPair ? ' <span class="pair-tag" title="Intended pair">pair</span>' : ''}</span>
+          <span class="rank__name">${escapeHtml(r.name)}${r.isPair ? ` <span class="pair-tag" title="${escapeHtml(t('sb.pairTitle'))}">${escapeHtml(t('sb.pairTag'))}</span>` : ''}</span>
           <span class="meter meter--small"><span style="width:${pct}%"></span></span>
           <span class="rank__score">${fmtScore(r.score)}</span>
         </button>
@@ -300,8 +303,8 @@ function critItem(item, kind) {
   return `
     <li class="match-item">
       <span class="match-item__label">${escapeHtml(item.crit.label)}</span>
-      <span class="match-item__values">s = ${item.s.toFixed(2)} · weight ${item.weight}</span>
-      ${kind === 'no' && item.gain >= 0.005 ? `<span class="match-item__share" title="Score gain if this criterion matched exactly">+${item.gain.toFixed(2)}</span>` : ''}
+      <span class="match-item__values">s = ${item.s.toFixed(2)} · ${escapeHtml(t('sb.weight', { w: item.weight }))}</span>
+      ${kind === 'no' && item.gain >= 0.005 ? `<span class="match-item__share" title="${escapeHtml(t('sb.gainTip'))}">+${item.gain.toFixed(2)}</span>` : ''}
     </li>`;
 }
 
@@ -311,19 +314,19 @@ function matchSection(bd) {
     : `<p class="match-empty">${empty}</p>`);
   return `
     <section>
-      <h3 class="section-title">What matches / What doesn't</h3>
-      <p class="match-caption">Per-criterion similarity s from <code>scores.csv</code> · match = s ≥ ${MATCH_THRESHOLD}</p>
+      <h3 class="section-title">${escapeHtml(t('sb.matchTitle'))}</h3>
+      <p class="match-caption">${t('sb.matchCaptionHtml', { t: MATCH_THRESHOLD })}</p>
       <div class="match-grid">
         <div class="match-col match-col--yes">
-          <h4>What matches <span class="count">${bd.matches.length}</span></h4>
-          ${list(bd.matches, 'yes', 'No criterion is close enough.')}
+          <h4>${escapeHtml(t('sb.matches'))} <span class="count">${bd.matches.length}</span></h4>
+          ${list(bd.matches, 'yes', escapeHtml(t('sb.noMatch')))}
         </div>
         <div class="match-col match-col--no">
-          <h4>What doesn't <span class="count">${bd.mismatches.length}</span></h4>
-          ${list(bd.mismatches, 'no', 'Everything compared is within range.')}
+          <h4>${escapeHtml(t('sb.mismatches'))} <span class="count">${bd.mismatches.length}</span></h4>
+          ${list(bd.mismatches, 'no', escapeHtml(t('sb.allMatch')))}
         </div>
       </div>
-      ${bd.skipped.length ? `<p class="match-skipped">Not compared (missing data or zero weight): ${bd.skipped.map((i) => escapeHtml(i.crit.label)).join(', ')}</p>` : ''}
+      ${bd.skipped.length ? `<p class="match-skipped">${escapeHtml(t('sb.skipped', { list: bd.skipped.map((i) => i.crit.label).join(', ') }))}</p>` : ''}
     </section>`;
 }
 
@@ -333,7 +336,7 @@ function rawText(crit, site) {
   const v = crit.raw(site);
   if (crit.key === 'rock') return formatValue(PARAMS.find((p) => p.key === 'rock_class'), site.values.rock_class);
   if (v === null || v === undefined) return '—';
-  const unit = { temp_mean: ' °C', temp_range: ' °C', craters: ' /10⁶ km²', slope: '°', relief: ' m', sun: '°' }[crit.key] ?? '';
+  const unit = { temp_mean: ' °C', temp_range: ' °C', craters: ` ${t('unit.km2')}`, slope: '°', relief: ` ${t('unit.m')}`, sun: '°' }[crit.key] ?? '';
   const digits = crit.key === 'ice' ? 3 : crit.key === 'craters' || crit.key === 'relief' ? 0 : 1;
   return `${Number(v).toFixed(digits)}${unit}`;
 }
@@ -343,13 +346,13 @@ const MITIGATION_THRESHOLD = 0.5;
 
 /** Team mitigations (limits.json) linked to a criterion via `criteria`, or the unmapped_criteria text. */
 function mitigationsFor(body, critKey) {
-  const L = state.limits?.[body];
+  const L = limitsData()?.[body];
   if (!L) return { list: [], unmapped: null };
   const factorName = Object.fromEntries(L.factors.map((f) => [f.id, f.name]));
   const list = L.mitigations
     .filter((m) => m.criteria.includes(critKey))
     .map((m) => ({ ...m, addressNames: m.addresses.map((id) => factorName[id] ?? id) }));
-  return { list, unmapped: list.length ? null : (state.limits.unmapped_criteria?.[critKey] ?? null) };
+  return { list, unmapped: list.length ? null : (limitsData().unmapped_criteria?.[critKey] ?? null) };
 }
 
 function gapSection(analog, reference, row, bd) {
@@ -357,37 +360,36 @@ function gapSection(analog, reference, row, bd) {
     .filter((i) => i.s < MITIGATION_THRESHOLD)
     .sort((p, q) => q.gain - p.gain);
   const head = `
-      <h3 class="section-title">How to close the gap</h3>
-      <p class="match-caption">Criteria with similarity s &lt; ${MITIGATION_THRESHOLD} vs <strong>${escapeHtml(reference.name)}</strong>,
-        with methods from the team’s <em>Limits of the analogy</em> documents (<code>limits.json</code>).</p>`;
-  if (!weak.length) return `<section>${head}<p class="match-empty">No criterion is below ${MITIGATION_THRESHOLD}.</p></section>`;
+      <h3 class="section-title">${escapeHtml(t('sb.gapTitle'))}</h3>
+      <p class="match-caption">${t('sb.gapCaptionHtml', { t: MITIGATION_THRESHOLD, ref: escapeHtml(reference.name), file: getLang() === 'uk' && state.limitsByLang.uk ? 'limits_uk.json' : 'limits.json' })}</p>`;
+  if (!weak.length) return `<section>${head}<p class="match-empty">${escapeHtml(t('sb.gapNone', { t: MITIGATION_THRESHOLD }))}</p></section>`;
 
   const cards = weak.map((item) => {
     const { list, unmapped } = mitigationsFor(reference.body, item.crit.key);
     const team = list.length
       ? `<ul class="mitigations">${list.map((m) => `
-          <li>${escapeHtml(m.method)}${m.addressNames.length ? `<span class="mitigations__for">Addresses: ${m.addressNames.map(escapeHtml).join(', ')}</span>` : ''}</li>`).join('')}</ul>`
-      : `<p class="mitigations__none">${escapeHtml(unmapped ?? 'No mitigation listed.')}</p>`;
+          <li>${escapeHtml(m.method)}${m.addressNames.length ? `<span class="mitigations__for">${escapeHtml(t('sb.addresses', { list: m.addressNames.join(', ') }))}</span>` : ''}</li>`).join('')}</ul>`
+      : `<p class="mitigations__none">${escapeHtml(unmapped ?? t('sb.noMitigation'))}</p>`;
     return `
       <article class="gap-card">
         <header class="gap-card__head">
           <span class="gap-card__title">${escapeHtml(item.crit.label)} <span class="vs">s = ${item.s.toFixed(2)}</span></span>
-          <span class="gap-card__gain" title="Score gain if this criterion matched exactly">+${item.gain.toFixed(2)}</span>
+          <span class="gap-card__gain" title="${escapeHtml(t('sb.gainTip'))}">+${item.gain.toFixed(2)}</span>
         </header>
         <div class="gap-card__meta">
-          <span>Earth ${escapeHtml(rawText(item.crit, analog))} <span class="vs">vs</span> target ${escapeHtml(rawText(item.crit, reference))}</span>
+          <span>${t('sb.earthVsTargetHtml', { a: escapeHtml(rawText(item.crit, analog)), b: escapeHtml(rawText(item.crit, reference)) })}</span>
         </div>
         ${team}
       </article>`;
   }).join('');
   return `<section>${head}<div class="gap-list">${cards}</div>
-      ${state.limits?.meta?.criteria_link_note ? `<p class="match-skipped">${escapeHtml(state.limits.meta.criteria_link_note)}</p>` : ''}
+      ${limitsData()?.meta?.criteria_link_note ? `<p class="match-skipped">${escapeHtml(limitsData().meta.criteria_link_note)}</p>` : ''}
     </section>`;
 }
 
 /* ---------- Parameters table with status badges ---------- */
 
-function paramsTable(site, other = null) {
+function paramsTable(site, other = null, title = t('sb.params')) {
   const cell = (s, p) => `${escapeHtml(formatValue(p, s.values[p.key]))}${p.unit && s.values[p.key] !== null ? `<span class="unit">${escapeHtml(p.unit)}</span>` : ''} ${p.status ? statusBadge(s.status[p.status]) : ''}`;
   const rows = PARAMS.map((p) => `
     <tr>
@@ -399,14 +401,10 @@ function paramsTable(site, other = null) {
   const hasPlaceholder = [site, other].filter(Boolean).some((s) => Object.values(s.status).some((c) => statusInfo(c)?.kind === 'placeholder'));
   return `
     <section>
-      <h3 class="section-title">Parameters</h3>
+      <h3 class="section-title">${escapeHtml(title)}</h3>
       <table class="params${other ? ' params--two' : ''}">${head}<tbody>${rows}</tbody></table>
-      <p class="legend-line">
-        <span class="st st--literature">L</span> literature
-        <span class="st st--computed">C</span> computed
-        <span class="st st--placeholder">T</span><span class="st st--placeholder">E</span> test / estimate — placeholder value, not yet verified
-      </p>
-      ${hasPlaceholder ? '<p class="match-skipped">Values marked T / E are placeholders for UI development; do not cite them.</p>' : ''}
+      <p class="legend-line">${t('sb.legendHtml')}</p>
+      ${hasPlaceholder ? `<p class="match-skipped">${escapeHtml(t('sb.placeholderWarn'))}</p>` : ''}
     </section>`;
 }
 
@@ -415,7 +413,7 @@ function siteHead(site) {
     <header class="site-head">
       <span class="site-head__badge">${escapeHtml(siteBadge(site))}</span>
       <h2 class="site-head__name">${escapeHtml(site.name)}</h2>
-      ${site.nameUk ? `<div class="site-head__alt" lang="uk">${escapeHtml(site.nameUk)}</div>` : ''}
+      ${site.nameAlt ? `<div class="site-head__alt" lang="${getLang() === 'uk' ? 'en' : 'uk'}">${escapeHtml(site.nameAlt)}</div>` : ''}
       ${site.region ? `<div class="site-head__region">${escapeHtml(site.region)}</div>` : ''}
       <div class="site-head__coords">${formatCoords(site.lat, site.lon)}</div>
     </header>
@@ -425,24 +423,25 @@ function siteHead(site) {
 
 function limitsBlock(site) {
   const body = site.role === 'analog' ? site.analog_of : site.body;
-  const hasCard = Boolean(state.limits?.[body]);
+  const hasCard = Boolean(limitsData()?.[body]);
   if (!site.limits && !hasCard) return '';
   return `
     <section>
-      <h3 class="section-title">Limits of the analogy</h3>
+      <h3 class="section-title">${escapeHtml(t('card.limits'))}</h3>
       ${site.limits ? `<p class="site-desc">${escapeHtml(site.limits)}</p>` : ''}
-      ${hasCard ? `<button type="button" class="btn btn--block" data-action="limits">What Earth can’t reproduce on ${escapeHtml(BODIES[body].short)} →</button>` : ''}
+      ${hasCard ? `<button type="button" class="btn btn--block" data-action="limits">${escapeHtml(t(`sb.limitsBtn.${body}`))}</button>` : ''}
     </section>`;
 }
 
 /* ---------- Limits card in the Analysis view (data/limits.json) ---------- */
 
 function renderLimits(body) {
-  const L = state.limits?.[body];
+  const data = limitsData();
+  const L = data?.[body];
   $('#card-limits').hidden = !L;
   if (!L) return;
   const short = BODIES[body].short;
-  $('#limits-title').textContent = `Limits of the analogy: Earth — ${short}`;
+  $('#limits-title').textContent = t(`lim.title.${body}`);
   $('#limits-pdf').href = `docs/limits_${body}.pdf`;
 
   const factorName = Object.fromEntries(L.factors.map((f) => [f.id, f.name]));
@@ -458,40 +457,41 @@ function renderLimits(body) {
       <li class="mitigation">
         <p>${escapeHtml(m.method)}</p>
         <p class="mitigation__meta">
-          ${m.addresses.length ? `Addresses: ${m.addresses.map((id) => escapeHtml(factorName[id] ?? id)).join(', ')}` : 'General (no specific factor)'}
-          ${m.criteria.length ? ` · criteria: ${m.criteria.map((c) => `<span class="chip">${escapeHtml(critLabel[c] ?? c)}</span>`).join(' ')}` : ''}
+          ${escapeHtml(m.addresses.length ? t('sb.addresses', { list: m.addresses.map((id) => factorName[id] ?? id).join(', ') }) : t('lim.general'))}
+          ${m.criteria.length ? ` · ${escapeHtml(t('lim.criteria'))} ${m.criteria.map((c) => `<span class="chip">${escapeHtml(critLabel[c] ?? c)}</span>`).join(' ')}` : ''}
         </p>
       </li>`).join('');
 
   $('#limits-body').innerHTML = `
     <p class="limits__summary">${escapeHtml(L.summary)}</p>
-    ${state.limits.meta?.note ? `<p class="limits__muted">${escapeHtml(state.limits.meta.note)}</p>` : ''}
+    ${data.meta?.note ? `<p class="limits__muted">${escapeHtml(data.meta.note)}</p>` : ''}
 
     <section>
-      <h3 class="section-title">What Earth can’t reproduce</h3>
+      <h3 class="section-title">${escapeHtml(t('lim.cant'))}</h3>
       <div class="table-scroll">
         <table class="limits-table">
-          <thead><tr><th scope="col">Factor</th><th scope="col">${escapeHtml(short)}</th><th scope="col">Earth</th><th scope="col">Why it matters</th></tr></thead>
+          <thead><tr><th scope="col">${escapeHtml(t('lim.factor'))}</th><th scope="col">${escapeHtml(short)}</th><th scope="col">${escapeHtml(t('body.earth'))}</th><th scope="col">${escapeHtml(t('lim.why'))}</th></tr></thead>
           <tbody>${factorRows}</tbody>
         </table>
       </div>
     </section>
 
     <section>
-      <h3 class="section-title">How to close the gap</h3>
+      <h3 class="section-title">${escapeHtml(t('sb.gapTitle'))}</h3>
       <ul class="mitigation-list">${mitigations}</ul>
-      ${state.limits.meta?.criteria_link_note ? `<p class="limits__muted">${escapeHtml(state.limits.meta.criteria_link_note)}</p>` : ''}
+      ${data.meta?.criteria_link_note ? `<p class="limits__muted">${escapeHtml(data.meta.criteria_link_note)}</p>` : ''}
     </section>
 
     <section class="limits__conclusion">
-      <h3 class="section-title">Conclusion</h3>
-      <h4 class="limits__sub">What Earth analogs are good at</h4>
+      <h3 class="section-title">${escapeHtml(t('lim.conclusion'))}</h3>
+      <h4 class="limits__sub">${escapeHtml(t('lim.goodAt'))}</h4>
       <ul class="limits__list">${L.good_at.map((g) => {
         const i = g.indexOf(':');
         return i > 0 && i < 60 ? `<li><strong>${escapeHtml(g.slice(0, i))}:</strong>${escapeHtml(g.slice(i + 1))}</li>` : `<li>${escapeHtml(g)}</li>`;
       }).join('')}</ul>
       <p class="limits__text">${escapeHtml(L.conclusion)}</p>
-    </section>`;
+    </section>
+    ${data.meta?.translation_note ? `<p class="limits__muted">${escapeHtml(data.meta.translation_note)}</p>` : ''}`;
 }
 
 function renderAnalogSidebar(site) {
@@ -505,14 +505,14 @@ function renderAnalogSidebar(site) {
     ${siteHead(site)}
     <section>
       <div class="section-row">
-        <h3 class="section-title">Similarity</h3>
+        <h3 class="section-title">${escapeHtml(t('sb.similarity'))}</h3>
         ${scenarioSelect('sb-scenario')}
       </div>
-      ${reference ? indexCard(row, reference.name, row?.isPair) : '<p class="match-empty">No reference to compare with.</p>'}
-      ${reference ? `<button type="button" class="btn btn--primary btn--block" data-action="compare" data-analog="${escapeHtml(site.id)}" data-ref="${escapeHtml(reference.id)}">Compare with reference</button>` : ''}
+      ${reference ? indexCard(row, reference.name, row?.isPair) : `<p class="match-empty">${escapeHtml(t('sb.noRef'))}</p>`}
+      ${reference ? `<button type="button" class="btn btn--primary btn--block" data-action="compare" data-analog="${escapeHtml(site.id)}" data-ref="${escapeHtml(reference.id)}">${escapeHtml(t('sb.compareBtn'))}</button>` : ''}
     </section>
     <section>
-      <h3 class="section-title">Compared with</h3>
+      <h3 class="section-title">${escapeHtml(t('sb.comparedWith'))}</h3>
       <ul class="rank-list">${rankRows(refs.map((r) => ({ id: r.referenceId, name: r.reference.name, score: r.score, isPair: r.isPair })), { active: refId, attr: 'data-ref-pick' })}</ul>
     </section>
     ${bd ? matchSection(bd) : ''}
@@ -527,11 +527,11 @@ function renderReferenceSidebar(site) {
     ${siteHead(site)}
     <section>
       <div class="section-row">
-        <h3 class="section-title">Best Earth analogs</h3>
+        <h3 class="section-title">${escapeHtml(t('sb.bestAnalogs'))}</h3>
         ${scenarioSelect('sb-scenario')}
       </div>
       <ul class="rank-list">${rankRows(rows.map((r) => ({ id: r.analogId, name: r.analog.name, score: r.score, isPair: r.isPair })), { active: null, attr: 'data-analog-pick' })}</ul>
-      <button type="button" class="btn btn--primary btn--block" data-action="compare" data-ref="${escapeHtml(site.id)}" data-analog="${escapeHtml(rows[0]?.analogId ?? '')}">Open in Analysis</button>
+      <button type="button" class="btn btn--primary btn--block" data-action="compare" data-ref="${escapeHtml(site.id)}" data-analog="${escapeHtml(rows[0]?.analogId ?? '')}">${escapeHtml(t('sb.openAnalysis'))}</button>
     </section>
     ${paramsTable(site)}
     ${limitsBlock(site)}`;
@@ -561,7 +561,7 @@ function fillSelect(sel, options, value) {
 
 function renderAnalysis() {
   if (!state.book || !window.Chart) {
-    $('#analysis-note').textContent = window.Chart ? 'Data not loaded.' : 'Chart.js failed to load.';
+    $('#analysis-note').textContent = t(window.Chart ? 'an.noData' : 'an.noChart');
     return;
   }
   ensureAnalysisSelection();
@@ -573,13 +573,13 @@ function renderAnalysis() {
 
   fillSelect($('#ctl-scenario'), SCENARIO_CHOICES.map((c) => ({ value: c.key, label: c.label })), state.scenario);
   fillSelect($('#ctl-reference'), refs.map((r) => ({ value: r.id, label: `${BODIES[r.body].short} · ${r.name}` })), referenceId);
-  fillSelect($('#ctl-analog'), analogsAll.map((s) => ({ value: s.id, label: `${s.name}${s.pairId === referenceId ? ' (pair)' : ''}` })), analogId);
+  fillSelect($('#ctl-analog'), analogsAll.map((s) => ({ value: s.id, label: `${s.name}${s.pairId === referenceId ? t('an.pair') : ''}` })), analogId);
 
   const scenario = state.book.scenarioFor(referenceId, state.scenario);
   const heatScenario = state.scenario === 'auto' ? 'equal' : state.scenario;
   $('#analysis-note').innerHTML = state.scenario === 'auto'
-    ? `Auto: each reference uses its body's scenario (Mars — ${escapeHtml(scenarioName('mars_landing'))}, Moon — ${escapeHtml(scenarioName('moon_base'))}), as in <code>ranking.csv</code>. The heat map uses equal weights so Mars and Moon columns are comparable.`
-    : `All charts use the ${escapeHtml(scenarioName(state.scenario))} scenario from <code>scores.csv</code>.`;
+    ? t('an.noteAutoHtml', { mars: escapeHtml(scenarioName('mars_landing')), moon: escapeHtml(scenarioName('moon_base')) })
+    : t('an.noteOneHtml', { s: escapeHtml(scenarioName(state.scenario)) });
 
   // Charts need visible, laid-out canvases.
   requestAnimationFrame(() => {
@@ -619,7 +619,7 @@ function pngFor(kind) {
     raw: `raw-${analog?.id}-vs-${ref?.id}`,
   }[kind];
   if (kind === 'raw') {
-    downloadPng(RAW_GROUPS.map((g) => g.id), name, { title: `${analog?.name} vs ${ref?.name} — raw parameters`, background: bg });
+    downloadPng(RAW_GROUPS.map((g) => g.id), name, { title: t('an.rawPngTitle', { a: analog?.name, r: ref?.name }), background: bg });
   } else {
     downloadPng([kind], name);
   }
@@ -641,22 +641,22 @@ function shortText(text, max = 3) {
 function globeGroupCardHtml(group) {
   const bodies = new Set(group.members.map((s) => s.analog_of));
   const badge = bodies.size === 1
-    ? `<span class="badge badge--${[...bodies][0]}">Analogs of ${[...bodies][0] === 'moon' ? 'Moon' : 'Mars'}</span>`
-    : '<span class="badge">Mars & Moon analogs</span>';
+    ? `<span class="badge badge--${[...bodies][0]}">${escapeHtml(t(`gl.groupBadge.${[...bodies][0]}`))}</span>`
+    : `<span class="badge">${escapeHtml(t('gl.groupBadge.mixed'))}</span>`;
   const rows = group.members.map((s) => {
     const ref = byId(s.pairId);
     const row = ref ? state.book.get(s.id, ref.id, 'auto') : null;
     return `<li><button type="button" class="group-pick" data-gaction="pick" data-site="${escapeHtml(s.id)}">
         <span class="group-pick__dot group-pick__dot--${s.analog_of ?? 'earth'}" aria-hidden="true"></span>
-        <span class="group-pick__name">${escapeHtml(s.name)}<small>${ref ? `vs ${escapeHtml(ref.name)}` : escapeHtml(s.region)}</small></span>
+        <span class="group-pick__name">${escapeHtml(s.name)}<small>${escapeHtml(ref ? t('gl.refLine', { ref: ref.name }) : s.region)}</small></span>
         ${row ? `<strong class="group-pick__score">${fmtScore(row.score)}</strong>` : ''}
       </button></li>`;
   }).join('');
   return `
     ${badge}
     <h3 class="site-card__title">${escapeHtml(group.name)}</h3>
-    <p class="kicker kicker--small">${escapeHtml(group.region)} · ${group.members.length} sites · ${formatCoords(group.lat, group.lon, 1)}</p>
-    <p class="site-card__text">These sites lie too close together to pick on the whole globe, so they are spread out on a small ring. Thin lines lead to each exact location.</p>
+    <p class="kicker kicker--small">${escapeHtml(group.region)} · ${escapeHtml(nSites(group.members.length))} · ${formatCoords(group.lat, group.lon, 1)}</p>
+    <p class="site-card__text">${escapeHtml(t('gl.groupText'))}</p>
     <ul class="group-list">${rows}</ul>`;
 }
 
@@ -664,31 +664,30 @@ function globeCardHtml(site, group = null) {
   const target = site.analog_of;
   const ref = byId(site.pairId);
   const row = ref ? state.book.get(site.id, ref.id, 'auto') : null;
-  const targetName = target === 'moon' ? 'the Moon' : 'Mars';
   const photo = site.photo
     ? `<figure class="site-card__photo">
         <img src="${escapeHtml(site.photo.img)}" alt="${escapeHtml(site.name)}" loading="lazy" decoding="async">
-        <figcaption><a href="${escapeHtml(site.photo.page)}" target="_blank" rel="noopener">${escapeHtml([site.photo.author, site.photo.license].filter(Boolean).join(' · ') || 'Photo source')}</a></figcaption>
+        <figcaption><a href="${escapeHtml(site.photo.page)}" target="_blank" rel="noopener">${escapeHtml([site.photo.author, site.photo.license].filter(Boolean).join(' · ') || t('photo.source'))}</a></figcaption>
       </figure>`
     : '';
   return `
-    <span class="badge badge--${target ?? 'earth'}">Analog of ${target === 'moon' ? 'Moon' : 'Mars'}</span>
+    <span class="badge badge--${target ?? 'earth'}">${escapeHtml(target ? t(`gl.badge.${target}`) : t('site.earthSite'))}</span>
     <h3 class="site-card__title">${escapeHtml(site.name)}</h3>
     <p class="kicker kicker--small">${escapeHtml(site.region)} · ${formatCoords(site.lat, site.lon, 1)}</p>
-    ${group ? `<p class="site-card__group">Part of <strong>${escapeHtml(group.name)}</strong> · ${group.members.length} sites · “Back” returns to the list</p>` : ''}
+    ${group ? `<p class="site-card__group">${t('gl.partOfHtml', { g: escapeHtml(group.name), n: escapeHtml(nSites(group.members.length)) })}</p>` : ''}
     ${photo}
     <p class="site-card__text">${escapeHtml(shortText(site.description))}</p>
-    ${row ? `<p class="site-card__sim"><span class="kicker kicker--small">Similarity</span> <strong>${fmtScore(row.score)}</strong>
-        <span>vs ${escapeHtml(ref.name)} · ${escapeHtml(scenarioName(row.scenario))}</span></p>` : ''}
+    ${row ? `<p class="site-card__sim"><span class="kicker kicker--small">${escapeHtml(t('gl.similarity'))}</span> <strong>${fmtScore(row.score)}</strong>
+        <span>${escapeHtml(t('gl.vsLine', { ref: ref.name, scn: scenarioName(row.scenario) }))}</span></p>` : ''}
     <div class="site-card__actions">
-      ${ref ? `<button type="button" class="btn-accent" data-gaction="compare">Compare with ${targetName}</button>` : ''}
-      <button type="button" class="btn-ghost" data-gaction="map">Open in Map view</button>
+      ${ref ? `<button type="button" class="btn-accent" data-gaction="compare">${escapeHtml(t(`gl.compare.${ref.body}`))}</button>` : ''}
+      <button type="button" class="btn-ghost" data-gaction="map">${escapeHtml(t('gl.openMap'))}</button>
     </div>`;
 }
 
 function globeCompare(analog, reference) {
   const row = state.book.get(analog.id, reference.id, 'auto');
-  $('#globe-target-label').textContent = `${BODIES[reference.body].short} · reference`;
+  $('#globe-target-label').textContent = t(`gl.targetLabel.${reference.body}`);
   radarChart($('#globe-radar'), { row, analog, reference, id: 'globe-radar', compact: true });
   const bd = row ? breakdown(row) : null;
   const details = $('#globe-details');
@@ -696,12 +695,12 @@ function globeCompare(analog, reference) {
   const level = row ? similarityLevel(row.score)?.label ?? '' : '';
   details.innerHTML = `
     <header class="space__details-head">
-      <p class="kicker">Comparison · ${escapeHtml(scenarioName(row?.scenario ?? 'equal'))}</p>
-      <h3 class="display display--small">${escapeHtml(analog.name)} <span class="hl">vs</span> ${escapeHtml(reference.name)}</h3>
-      ${row ? `<p class="lede">Similarity <strong>${fmtScore(row.score)}</strong> (${escapeHtml(level)}). The radar between the globes shows each of the 8 criteria (1 = identical).</p>` : ''}
+      <p class="kicker">${escapeHtml(t('gl.cmpKicker', { scn: scenarioName(row?.scenario ?? 'equal') }))}</p>
+      <h3 class="display display--small">${escapeHtml(analog.name)} <span class="hl">${escapeHtml(t('gl.vs'))}</span> ${escapeHtml(reference.name)}</h3>
+      ${row ? `<p class="lede">${t('gl.cmpLedeHtml', { s: fmtScore(row.score), level: escapeHtml(level) })}</p>` : ''}
     </header>
     <div class="space__details-grid">
-      <div class="space-panel">${paramsTable(analog, reference).replace('>Parameters<', `>Earth vs ${escapeHtml(BODIES[reference.body].short)}<`)}</div>
+      <div class="space-panel">${paramsTable(analog, reference, t(`gl.earthVs.${reference.body}`))}</div>
       <div class="space-panel">${bd ? gapSection(analog, reference, row, bd) : ''}</div>
     </div>`;
   details.hidden = false;
@@ -840,6 +839,7 @@ function readHash() {
   if (['mars', 'moon'].includes(h.get('target'))) state.compareTarget = h.get('target');
   if (['polar', 'global'].includes(h.get('proj'))) state.moonProjection = h.get('proj');
   if (SCENARIO_CHOICES.some((c) => c.key === h.get('scn'))) state.scenario = h.get('scn');
+  if (LANGS.includes(h.get('lang'))) setLang(h.get('lang'));
   state.analysis.referenceId = h.get('ref');
   state.analysis.analogId = h.get('analog');
   return { site: h.get('site'), popup: h.get('popup'), focus: h.get('focus'), group: h.get('group'), globeMode: h.get('g') };
@@ -862,6 +862,7 @@ function writeHash() {
   }
   if (state.scenario !== 'auto') h.set('scn', state.scenario);
   if (state.selected && state.view !== 'globe') h.set('site', state.selected.id);
+  h.set('lang', getLang());
   history.replaceState(null, '', `#${h}`);
 }
 
@@ -871,19 +872,32 @@ function showStatus(html) {
   el.hidden = false;
 }
 
+/** Language switch: redraw everything that holds text. Maps are rebuilt (legends, controls). */
+function relocalize() {
+  for (const k of Object.keys(singleMaps)) { singleMaps[k]?.destroy(); delete singleMaps[k]; }
+  compareMaps.earth?.destroy();
+  compareMaps.target?.destroy();
+  compareMaps.earth = null;
+  compareMaps.target = null;
+  globeStage?.relocalize();
+  render();
+  if (state.selected && state.view !== 'globe') renderSidebar(state.selected);
+}
+
 async function init() {
+  applyStatic();
+  onLangChange(relocalize);
+  $$('[data-lang]').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
   bindEvents();
   try {
-    const [data, limits] = await Promise.all([loadAll('data/'), loadLimits('data/limits.json')]);
+    const [data, limitsEn, limitsUk] = await Promise.all([loadAll('data/'), loadLimits('data/limits.json'), loadLimits('data/limits_uk.json')]);
     state.sites = data.sites;
     state.book = new ScoreBook(data);
-    state.limits = limits;
+    state.limitsByLang = { en: limitsEn, uk: limitsUk };
   } catch (err) {
     console.error(err);
     const fileProto = location.protocol === 'file:';
-    showStatus(fileProto
-      ? 'Could not load the CSV files from a local file. Serve the folder over HTTP, e.g. <code>python -m http.server 8000</code>, then open <code>http://localhost:8000</code>.'
-      : `Could not load site data: ${escapeHtml(err.message || err)}`);
+    showStatus(fileProto ? t('status.file') : escapeHtml(t('status.error', { e: err.message || err })));
   }
   const { site: siteId, popup: popupId, focus: focusId, group: groupId, globeMode } = readHash();
   if (!WEBGL) $('.tab[data-tab="globe"]').hidden = true;

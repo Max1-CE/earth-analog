@@ -14,6 +14,7 @@
  * self-contained image for slides.
  */
 import { CRITERIA, PARAM, SCENARIOS, statusInfo } from './data.js';
+import { t as tr } from './i18n.js'; // `t` is the theme-colour object in this file
 
 const Chart = window.Chart;
 
@@ -127,8 +128,7 @@ export function rankingChart(canvas, { rows, reference, scenario, selectedId, on
   const t = themeColors(canvas);
   const other = withAlpha(t.muted, 0.45);
   canvas.parentElement.style.height = `${rows.length * 30 + 110}px`;
-  const base = baseOptions(t, `Earth analogs ranked for ${reference.name}`,
-    `Similarity score, scenario: ${scenarioLabel(scenario)} · click a bar to compare it on the radar`);
+  const base = baseOptions(t, tr('ch.rankTitle', { ref: reference.name }), tr('ch.rankSub', { s: scenarioLabel(scenario) }));
   return mount('ranking', canvas, {
     type: 'bar',
     data: {
@@ -149,7 +149,7 @@ export function rankingChart(canvas, { rows, reference, scenario, selectedId, on
       onClick: (_e, els) => { if (els[0]) onPick?.(rows[els[0].index].analogId); },
       onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
       scales: {
-        x: axis(t, { min: 0, max: 1, ticks: { color: t.muted, stepSize: 0.2 }, title: { display: true, text: 'Score (0 = no match, 1 = identical)', color: t.muted } }),
+        x: axis(t, { min: 0, max: 1, ticks: { color: t.muted, stepSize: 0.2 }, title: { display: true, text: tr('ch.scoreAxis'), color: t.muted } }),
         y: axis(t, { grid: { display: false }, ticks: { color: t.text, autoSkip: false } }),
       },
       plugins: {
@@ -159,8 +159,8 @@ export function rankingChart(canvas, { rows, reference, scenario, selectedId, on
           labels: {
             ...base.plugins.legend.labels,
             generateLabels: () => [
-              { text: 'Intended analog (pair)', fillStyle: SERIES.analog, strokeStyle: SERIES.analog, fontColor: t.text, lineWidth: 0 },
-              { text: 'Other analogs', fillStyle: other, strokeStyle: other, fontColor: t.text, lineWidth: 0 },
+              { text: tr('ch.legendPair'), fillStyle: SERIES.analog, strokeStyle: SERIES.analog, fontColor: t.text, lineWidth: 0 },
+              { text: tr('ch.legendOther'), fillStyle: other, strokeStyle: other, fontColor: t.text, lineWidth: 0 },
             ],
           },
           onClick: () => {},
@@ -168,10 +168,10 @@ export function rankingChart(canvas, { rows, reference, scenario, selectedId, on
         tooltip: {
           ...base.plugins.tooltip,
           callbacks: {
-            label: (c) => `Score ${fmt(c.raw, 3)} · rank ${rows[c.dataIndex].rank}`,
+            label: (c) => tr('ch.scoreRank', { v: fmt(c.raw, 3), r: rows[c.dataIndex].rank }),
             footer: (items) => {
               const r = rows[items[0].dataIndex];
-              return [`Coverage ${fmt(r.coverage)}`, r.isPair ? 'Intended analog for this reference' : ''].filter(Boolean);
+              return [tr('ch.coverage', { v: fmt(r.coverage) }), r.isPair ? tr('ch.intendedFor') : ''].filter(Boolean);
             },
           },
         },
@@ -214,8 +214,8 @@ export function radarChart(canvas, { row, analog, reference, id = 'radar', compa
   const t = themeColors(canvas);
   const refColor = SERIES[reference.body] ?? t.muted;
   const values = CRITERIA.map((c) => row?.s[c.key] ?? null);
-  const base = baseOptions(t, `${analog.name} vs ${reference.name}`,
-    row ? `Similarity per criterion (0–1) · total ${fmt(row.score)} · scenario: ${scenarioLabel(row.scenario)}` : 'No score for this pair');
+  const base = baseOptions(t, tr('ch.radarTitle', { a: analog.name, r: reference.name }),
+    row ? tr('ch.radarSub', { t: fmt(row.score), s: scenarioLabel(row.scenario) }) : tr('ch.noScore'));
   if (compact) {
     base.plugins.title.display = false;
     base.plugins.subtitle.display = false;
@@ -228,7 +228,7 @@ export function radarChart(canvas, { row, analog, reference, id = 'radar', compa
       labels: CRITERIA.map((c) => c.label),
       datasets: [
         {
-          label: `${analog.name} (Earth analog)`,
+          label: tr('ch.analogDs', { a: analog.name }),
           data: values,
           borderColor: SERIES.analog,
           backgroundColor: withAlpha(SERIES.analog, 0.22),
@@ -241,7 +241,7 @@ export function radarChart(canvas, { row, analog, reference, id = 'radar', compa
           spanGaps: false,
         },
         {
-          label: `${reference.name} (reference = 1)`,
+          label: tr('ch.refDs', { r: reference.name }),
           data: CRITERIA.map(() => 1),
           borderColor: refColor,
           backgroundColor: 'transparent',
@@ -273,7 +273,7 @@ export function radarChart(canvas, { row, analog, reference, id = 'radar', compa
             label: (c) => {
               const crit = CRITERIA[c.dataIndex];
               const w = SCENARIOS[row?.scenario]?.weights?.[crit.key];
-              return `s = ${fmt(c.raw, 3)}${w !== undefined ? ` · weight ${w}` : ''}`;
+              return `s = ${fmt(c.raw, 3)}${w !== undefined ? tr('ch.sWeight', { w }) : ''}`;
             },
           },
         },
@@ -312,8 +312,8 @@ export function heatmapChart(canvas, { analogs, references, cell, scenario, onPi
 
   canvas.parentElement.style.height = `${ys.length * 30 + 190}px`;
   const LEGEND_H = 46;
-  const base = baseOptions(t, 'Similarity of every Earth analog to every reference',
-    `Scenario: ${scenarioLabel(scenario)} · mean score vs Mars ${fmt(mean('mars'))}, vs Moon ${fmt(mean('moon'))} · outlined = intended pair, number = best analog per reference`);
+  const base = baseOptions(t, tr('ch.heatTitle'),
+    tr('ch.heatSub', { s: scenarioLabel(scenario), m: fmt(mean('mars')), n: fmt(mean('moon')) }));
 
   return mount('heatmap', canvas, {
     type: 'matrix',
@@ -343,8 +343,8 @@ export function heatmapChart(canvas, { analogs, references, cell, scenario, onPi
           ...base.plugins.tooltip,
           callbacks: {
             title: (items) => { const d = items[0].raw; return `${d.a.name} → ${d.r.name}`; },
-            label: (c) => `Score ${fmt(c.raw.v, 3)} · coverage ${fmt(c.raw.row.coverage)}`,
-            footer: (items) => (items[0].raw.row.isPair ? 'Intended pair' : ''),
+            label: (c) => tr('ch.heatLabel', { v: fmt(c.raw.v, 3), c: fmt(c.raw.row.coverage) }),
+            footer: (items) => (items[0].raw.row.isPair ? tr('ch.intendedPair') : ''),
           },
         },
       },
@@ -384,7 +384,7 @@ export function heatmapChart(canvas, { analogs, references, cell, scenario, onPi
         ctx.textAlign = 'left';
         ctx.fillText(lo.toFixed(1), x0, y0 + 14);
         ctx.textAlign = 'center';
-        ctx.fillText('score', x0 + w / 2, y0 + 14);
+        ctx.fillText(tr('ch.scoreWord'), x0 + w / 2, y0 + 14);
         ctx.textAlign = 'right';
         ctx.fillText(hi.toFixed(1), x0 + w, y0 + 14);
         ctx.restore();
@@ -409,11 +409,15 @@ function wrap(text, n) {
 /* ------------------------------------------------------------------ */
 
 export const RAW_GROUPS = [
-  { id: 'raw-temp', title: 'Surface temperature', unit: '°C', items: [['Min', 't_surf_min_c'], ['Mean', 't_surf_mean_c'], ['Max', 't_surf_max_c']] },
-  { id: 'raw-sun', title: 'Solar elevation', unit: '°', items: [['Min', 'sun_elev_min_deg'], ['Max', 'sun_elev_max_deg']] },
-  { id: 'raw-slope', title: 'Mean slope', unit: '°', items: [['Slope', 'slope_mean_deg']] },
-  { id: 'raw-relief', title: 'Relief', unit: 'm', items: [['Relief', 'relief_m']] },
+  { id: 'raw-temp', titleKey: 'raw.temp', unit: '°C', items: [['raw.min', 't_surf_min_c'], ['raw.mean', 't_surf_mean_c'], ['raw.max', 't_surf_max_c']] },
+  { id: 'raw-sun', titleKey: 'raw.sun', unit: '°', items: [['raw.min', 'sun_elev_min_deg'], ['raw.max', 'sun_elev_max_deg']] },
+  { id: 'raw-slope', titleKey: 'raw.slope', unit: '°', items: [['raw.slopeItem', 'slope_mean_deg']] },
+  { id: 'raw-relief', titleKey: 'raw.relief', unitKey: 'unit.m', items: [['raw.reliefItem', 'relief_m']] },
 ];
+for (const g of RAW_GROUPS) {
+  Object.defineProperty(g, 'title', { get: () => tr(g.titleKey) });
+  if (g.unitKey) Object.defineProperty(g, 'unit', { get: () => tr(g.unitKey) });
+}
 
 export function rawCharts(canvases, { analog, reference }) {
   const t = themeColors(canvases[0]);
@@ -424,7 +428,7 @@ export function rawCharts(canvases, { analog, reference }) {
     return mount(g.id, canvases[gi], {
       type: 'bar',
       data: {
-        labels: g.items.map(([l]) => l),
+        labels: g.items.map(([l]) => tr(l)),
         datasets: series.map(([site, color]) => ({
           label: site.name,
           data: g.items.map(([, key]) => site.values[key]),
@@ -453,7 +457,7 @@ export function rawCharts(canvases, { analog, reference }) {
                 const key = g.items[c.dataIndex][1];
                 const p = PARAM[key];
                 const st = statusInfo(c.dataset.site.status[p.status]);
-                return `${c.dataset.label}: ${fmt(c.raw, p.digits)} ${g.unit}${st ? ` · ${st.label}${st.kind === 'placeholder' ? ' (placeholder value, not yet verified)' : ''}` : ''}`;
+                return `${c.dataset.label}: ${fmt(c.raw, p.digits)} ${g.unit}${st ? ` · ${st.label}${st.kind === 'placeholder' ? tr('ch.placeholder') : ''}` : ''}`;
               },
             },
           },

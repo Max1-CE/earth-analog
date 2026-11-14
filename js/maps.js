@@ -22,6 +22,7 @@
  * BODY_MAPS keys are "map keys"; several map keys may share one `body`
  * (e.g. moon / moonGlobal) — `body` drives theme, legend and site filtering.
  */
+import { t } from './i18n.js';
 
 const L = window.L;
 
@@ -182,8 +183,8 @@ export function projectionControl(current, onChange) {
   ctl.onAdd = () => {
     const div = L.DomUtil.create('div', 'map-proj segmented');
     div.setAttribute('role', 'group');
-    div.setAttribute('aria-label', 'Moon projection');
-    for (const [value, text] of [['polar', 'South Pole'], ['global', 'Global']]) {
+    div.setAttribute('aria-label', t('map.projAria'));
+    for (const [value, text] of [['polar', t('map.proj.polar')], ['global', t('map.proj.global')]]) {
       const b = L.DomUtil.create('button', 'segmented__btn', div);
       b.type = 'button';
       b.textContent = text;
@@ -282,8 +283,8 @@ function legendControl(body) {
       `<svg viewBox="0 0 24 24" width="16" height="16">${SHAPES[kind]}</svg></span>${text}</div>`;
     div.innerHTML =
       body === 'earth'
-        ? row('mars', 'Mars analog') + row('moon', 'Moon analog') + row('native', 'Other site')
-        : row('native', `${body === 'mars' ? 'Mars' : 'Lunar'} target site`);
+        ? row('mars', t('legend.mars')) + row('moon', t('legend.moon')) + row('native', t('map.legend.other'))
+        : row('native', t(`map.legend.target.${body}`));
     L.DomEvent.disableClickPropagation(div);
     return div;
   };
@@ -347,7 +348,7 @@ export class MapView {
       } else {
         this._grid = true;
       }
-      this.map.attributionControl.addAttribution('Placeholder grid (tiles unavailable)');
+      this.map.attributionControl.addAttribution(t('map.placeholder'));
     };
 
     if (!cfg.tiles) { useGrid(); return; }

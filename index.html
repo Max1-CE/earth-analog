@@ -9,18 +9,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=202611140724">
+  <link rel="stylesheet" href="css/style.css?v=202611140743">
   <!-- Cache-busting version: set by `python tools/bump_version.py` before each push -->
-  <meta name="app-version" content="202611140724">
+  <meta name="app-version" content="202611140743">
   <script type="importmap" id="app-importmap">
 {
   "imports": {
-    "./js/app.js": "./js/app.js?v=202611140724",
-    "./js/charts.js": "./js/charts.js?v=202611140724",
-    "./js/data.js": "./js/data.js?v=202611140724",
-    "./js/globe.js": "./js/globe.js?v=202611140724",
-    "./js/maps.js": "./js/maps.js?v=202611140724",
-    "./js/scores.js": "./js/scores.js?v=202611140724"
+    "./js/app.js": "./js/app.js?v=202611140743",
+    "./js/charts.js": "./js/charts.js?v=202611140743",
+    "./js/data.js": "./js/data.js?v=202611140743",
+    "./js/globe.js": "./js/globe.js?v=202611140743",
+    "./js/i18n.js": "./js/i18n.js?v=202611140743",
+    "./js/maps.js": "./js/maps.js?v=202611140743",
+    "./js/scores.js": "./js/scores.js?v=202611140743"
   }
 }
   </script>
@@ -31,50 +32,55 @@
       <span class="brand__logo" aria-hidden="true"></span>
       <div>
         <h1 class="brand__title">Earth Analog Explorer</h1>
-        <p class="brand__subtitle">NASA Space Apps 2026 · Earth Analog</p>
+        <p class="brand__subtitle" data-i18n="app.subtitle">NASA Space Apps 2026 · Earth Analog</p>
       </div>
     </div>
 
-    <nav class="tabs" role="tablist" aria-label="Sections">
-      <button class="tab" role="tab" data-tab="globe" aria-selected="true">Globe</button>
-      <button class="tab" role="tab" data-tab="map" aria-selected="false">Map view</button>
-      <button class="tab" role="tab" data-tab="analysis" aria-selected="false">Analysis</button>
+    <nav class="tabs" role="tablist" aria-label="Sections" data-i18n-attr="aria-label:nav.sections">
+      <button class="tab" role="tab" data-tab="globe" aria-selected="true" data-i18n="tab.globe">Globe</button>
+      <button class="tab" role="tab" data-tab="map" aria-selected="false" data-i18n="tab.map">Map view</button>
+      <button class="tab" role="tab" data-tab="analysis" aria-selected="false" data-i18n="tab.analysis">Analysis</button>
     </nav>
+
+    <div class="lang-switch" role="group" aria-label="Language" data-i18n-attr="aria-label:lang.label">
+      <button type="button" class="lang-switch__btn" data-lang="uk" lang="uk" aria-pressed="false" title="Українська">UA</button>
+      <button type="button" class="lang-switch__btn" data-lang="en" lang="en" aria-pressed="true" title="English">EN</button>
+    </div>
   </header>
 
   <div id="status" class="status" hidden></div>
 
   <!-- Home: space infographic with 3D globes (js/globe.js) -->
-  <section class="space" id="globe-view" data-body="earth" aria-label="Explore Earth analogs on a globe" hidden>
+  <section class="space" id="globe-view" data-body="earth" aria-label="Explore Earth analogs on a globe" data-i18n-attr="aria-label:globe.aria" hidden>
     <canvas class="space__stars" aria-hidden="true"></canvas>
     <div class="space__intro">
-      <p class="kicker">Earth Analog · NASA Space Apps · 2026</p>
-      <h2 class="display">Where on <em class="hl hl--earth">Earth</em> is most like <em class="hl hl--mars">Mars</em> or <em class="hl hl--moon">the Moon</em>?</h2>
-      <p class="lede">Each glowing point is a place on Earth used to rehearse missions to another world. Click one to see how close it really is.</p>
+      <p class="kicker" data-i18n="intro.kicker">Earth Analog · NASA Space Apps · 2026</p>
+      <h2 class="display" data-i18n-html="intro.title">Where on <em class="hl hl--earth">Earth</em> is most like <em class="hl hl--mars">Mars</em> or <em class="hl hl--moon">the Moon</em>?</h2>
+      <p class="lede" data-i18n="intro.lede">Each glowing point is a place on Earth used to rehearse missions to another world. Click one to see how close it really is.</p>
       <ul class="space__legend">
-        <li><span class="dot dot--mars"></span>Mars analog</li>
-        <li><span class="dot dot--moon"></span>Moon analog</li>
+        <li><span class="dot dot--mars"></span><span data-i18n="legend.mars">Mars analog</span></li>
+        <li><span class="dot dot--moon"></span><span data-i18n="legend.moon">Moon analog</span></li>
       </ul>
     </div>
 
     <div class="space__stage" id="globe-stage" data-mode="idle">
       <div class="globe-slot globe-slot--earth" id="globe-earth">
         <div class="frame" aria-hidden="true"></div>
-        <span class="slot-label">Earth · analog</span>
+        <span class="slot-label" data-i18n="slot.earth">Earth · analog</span>
         <div class="globe-canvas"></div>
       </div>
       <div class="globe-slot globe-slot--target" id="globe-target" aria-hidden="true">
         <div class="frame" aria-hidden="true"></div>
-        <span class="slot-label" id="globe-target-label">Reference</span>
+        <span class="slot-label" id="globe-target-label" data-i18n="slot.reference">Reference</span>
         <div class="globe-canvas"></div>
       </div>
       <div class="space__radar" id="globe-radar-wrap">
-        <p class="kicker kicker--small">Similarity by criterion</p>
-        <div class="space__radar-box"><canvas id="globe-radar" role="img" aria-label="Radar of the 8 similarity criteria"></canvas></div>
+        <p class="kicker kicker--small" data-i18n="radar.kicker">Similarity by criterion</p>
+        <div class="space__radar-box"><canvas id="globe-radar" role="img" aria-label="Radar of the 8 similarity criteria" data-i18n-attr="aria-label:radar.aria"></canvas></div>
       </div>
       <aside class="site-card" id="globe-card" aria-live="polite" hidden></aside>
-      <button type="button" class="btn-back" id="globe-back">← Back</button>
-      <p class="space__hint" id="globe-hint">Drag to rotate · click a glowing point or a region</p>
+      <button type="button" class="btn-back" id="globe-back" data-i18n="globe.back">← Back</button>
+      <p class="space__hint" id="globe-hint" data-i18n="globe.hint">Drag to rotate · click a glowing point or a region</p>
     </div>
 
     <div class="space__details" id="globe-details" hidden></div>
@@ -83,19 +89,19 @@
   <main class="layout">
     <section class="workspace">
       <!-- Map view sub-navigation -->
-      <nav class="map-subnav segmented" id="map-subnav" aria-label="Map selection">
-        <button class="segmented__btn" data-view="earth" aria-pressed="true">Earth</button>
-        <button class="segmented__btn" data-view="mars" aria-pressed="false">Mars</button>
-        <button class="segmented__btn" data-view="moon" aria-pressed="false">Moon</button>
-        <button class="segmented__btn" data-view="compare" aria-pressed="false">Compare</button>
+      <nav class="map-subnav segmented" id="map-subnav" aria-label="Map selection" data-i18n-attr="aria-label:subnav.aria">
+        <button class="segmented__btn" data-view="earth" aria-pressed="true" data-i18n="body.earth">Earth</button>
+        <button class="segmented__btn" data-view="mars" aria-pressed="false" data-i18n="body.mars">Mars</button>
+        <button class="segmented__btn" data-view="moon" aria-pressed="false" data-i18n="body.moon">Moon</button>
+        <button class="segmented__btn" data-view="compare" aria-pressed="false" data-i18n="compare.tab">Compare</button>
       </nav>
 
       <!-- Compare sub-toggle (visible only in Compare mode) -->
       <div class="compare-bar" id="compare-bar" hidden>
-        <span class="compare-bar__label">Earth vs</span>
-        <div class="segmented" role="group" aria-label="Compare target">
-          <button class="segmented__btn" data-target="mars" aria-pressed="true">Mars</button>
-          <button class="segmented__btn" data-target="moon" aria-pressed="false">Moon</button>
+        <span class="compare-bar__label" data-i18n="compare.vs">Earth vs</span>
+        <div class="segmented" role="group" aria-label="Compare target" data-i18n-attr="aria-label:compare.aria">
+          <button class="segmented__btn" data-target="mars" aria-pressed="true" data-i18n="body.mars">Mars</button>
+          <button class="segmented__btn" data-target="moon" aria-pressed="false" data-i18n="body.moon">Moon</button>
         </div>
       </div>
 
@@ -109,28 +115,28 @@
       <!-- Compare view: Earth | target -->
       <div class="maps maps--compare" id="compare-view" hidden>
         <div class="map-pane" data-theme="earth" data-body="earth">
-          <span class="map-pane__label">Earth</span>
+          <span class="map-pane__label" data-i18n="body.earth">Earth</span>
           <div class="map" id="map-compare-earth"></div>
         </div>
         <div class="map-pane" data-theme="mars" data-body="mars" id="compare-target-pane">
-          <span class="map-pane__label" id="compare-target-label">Mars</span>
+          <span class="map-pane__label" id="compare-target-label" data-i18n="body.mars">Mars</span>
           <div class="map" id="map-compare-target"></div>
         </div>
       </div>
 
       <!-- Analysis view: charts from scores.csv / ranking.csv (js/charts.js) -->
-      <section class="analysis" id="analysis-view" aria-label="Analysis" hidden>
+      <section class="analysis" id="analysis-view" aria-label="Analysis" data-i18n-attr="aria-label:analysis.aria" hidden>
         <div class="analysis__toolbar">
           <label class="field">
-            <span class="field__label">Weighting scenario</span>
+            <span class="field__label" data-i18n="ctl.scenario">Weighting scenario</span>
             <select id="ctl-scenario"></select>
           </label>
           <label class="field">
-            <span class="field__label">Reference (Mars / Moon)</span>
+            <span class="field__label" data-i18n="ctl.reference">Reference (Mars / Moon)</span>
             <select id="ctl-reference"></select>
           </label>
           <label class="field">
-            <span class="field__label">Earth analog</span>
+            <span class="field__label" data-i18n="ctl.analog">Earth analog</span>
             <select id="ctl-analog"></select>
           </label>
         </div>
@@ -139,45 +145,45 @@
         <div class="analysis__grid">
           <article class="chart-card" id="card-ranking">
             <header class="chart-card__head">
-              <h2 class="chart-card__title">Ranking</h2>
-              <button type="button" class="btn" data-png="ranking">Download PNG</button>
+              <h2 class="chart-card__title" data-i18n="card.ranking">Ranking</h2>
+              <button type="button" class="btn" data-png="ranking" data-i18n="btn.png">Download PNG</button>
             </header>
-            <div class="chart-card__body"><canvas id="chart-ranking" role="img" aria-label="Ranking of Earth analogs for the selected reference"></canvas></div>
+            <div class="chart-card__body"><canvas id="chart-ranking" role="img" aria-label="Ranking of Earth analogs for the selected reference" data-i18n-attr="aria-label:aria.ranking"></canvas></div>
           </article>
 
           <article class="chart-card" id="card-radar">
             <header class="chart-card__head">
-              <h2 class="chart-card__title">Analog vs reference</h2>
-              <button type="button" class="btn" data-png="radar">Download PNG</button>
+              <h2 class="chart-card__title" data-i18n="card.radar">Analog vs reference</h2>
+              <button type="button" class="btn" data-png="radar" data-i18n="btn.png">Download PNG</button>
             </header>
-            <div class="chart-card__body chart-card__body--radar"><canvas id="chart-radar" role="img" aria-label="Radar chart of the 8 similarity criteria"></canvas></div>
+            <div class="chart-card__body chart-card__body--radar"><canvas id="chart-radar" role="img" aria-label="Radar chart of the 8 similarity criteria" data-i18n-attr="aria-label:aria.radar"></canvas></div>
           </article>
 
           <article class="chart-card chart-card--wide" id="card-heatmap">
             <header class="chart-card__head">
-              <h2 class="chart-card__title">Heat map: all analogs × all references</h2>
-              <button type="button" class="btn" data-png="heatmap">Download PNG</button>
+              <h2 class="chart-card__title" data-i18n="card.heatmap">Heat map: all analogs × all references</h2>
+              <button type="button" class="btn" data-png="heatmap" data-i18n="btn.png">Download PNG</button>
             </header>
-            <div class="chart-card__body"><canvas id="chart-heatmap" role="img" aria-label="Heat map of similarity scores"></canvas></div>
+            <div class="chart-card__body"><canvas id="chart-heatmap" role="img" aria-label="Heat map of similarity scores" data-i18n-attr="aria-label:aria.heatmap"></canvas></div>
           </article>
 
           <article class="chart-card chart-card--wide" id="card-raw">
             <header class="chart-card__head">
-              <h2 class="chart-card__title">Raw parameters</h2>
-              <button type="button" class="btn" data-png="raw">Download PNG</button>
+              <h2 class="chart-card__title" data-i18n="card.raw">Raw parameters</h2>
+              <button type="button" class="btn" data-png="raw" data-i18n="btn.png">Download PNG</button>
             </header>
             <div class="raw-grid">
-              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-temp" role="img" aria-label="Surface temperature"></canvas></div>
-              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-sun" role="img" aria-label="Solar elevation"></canvas></div>
-              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-slope" role="img" aria-label="Mean slope"></canvas></div>
-              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-relief" role="img" aria-label="Relief"></canvas></div>
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-temp" role="img" aria-label="Surface temperature" data-i18n-attr="aria-label:raw.temp"></canvas></div>
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-sun" role="img" aria-label="Solar elevation" data-i18n-attr="aria-label:raw.sun"></canvas></div>
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-slope" role="img" aria-label="Mean slope" data-i18n-attr="aria-label:raw.slope"></canvas></div>
+              <div class="chart-card__body chart-card__body--raw"><canvas id="chart-raw-relief" role="img" aria-label="Relief" data-i18n-attr="aria-label:raw.relief"></canvas></div>
             </div>
           </article>
 
           <article class="chart-card chart-card--wide limits-card" id="card-limits">
             <header class="chart-card__head">
-              <h2 class="chart-card__title" id="limits-title">Limits of the analogy</h2>
-              <a class="btn" id="limits-pdf" href="#" target="_blank" rel="noopener">Original (PDF, Ukrainian)</a>
+              <h2 class="chart-card__title" id="limits-title" data-i18n="card.limits">Limits of the analogy</h2>
+              <a class="btn" id="limits-pdf" href="#" target="_blank" rel="noopener" data-i18n="limits.pdf">Original (PDF, Ukrainian)</a>
             </header>
             <div class="limits" id="limits-body"></div>
           </article>
@@ -185,19 +191,19 @@
       </section>
     </section>
 
-    <aside class="sidebar" id="sidebar" aria-label="Site details">
-      <button class="sidebar__close" id="sidebar-close" aria-label="Close details">×</button>
+    <aside class="sidebar" id="sidebar" aria-label="Site details" data-i18n-attr="aria-label:sidebar.aria">
+      <button class="sidebar__close" id="sidebar-close" aria-label="Close details" data-i18n-attr="aria-label:sidebar.close">×</button>
       <div class="sidebar__content" id="sidebar-content">
         <div class="sidebar__empty">
-          <p>Click a marker on the map to see site details.</p>
+          <p data-i18n="sidebar.empty">Click a marker on the map to see site details.</p>
         </div>
       </div>
     </aside>
   </main>
 
   <footer class="app-footer">
-    <span>Grey-marked values are placeholders, not yet verified. Basemaps: OpenStreetMap, NASA Mars Trek, NASA Moon Trek. Charts: Chart.js.</span>
-    <span class="app-footer__credits">Globe textures:
+    <span data-i18n="footer.note">Grey-marked values are placeholders, not yet verified. Basemaps: OpenStreetMap, NASA Mars Trek, NASA Moon Trek. Charts: Chart.js.</span>
+    <span class="app-footer__credits" data-i18n-html="footer.credits">Globe textures:
       Earth — <a href="https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography" target="_blank" rel="noopener">NASA Visible Earth, Blue Marble</a> (Reto Stöckli, NASA GSFC);
       Moon — <a href="https://svs.gsfc.nasa.gov/4720" target="_blank" rel="noopener">NASA's Scientific Visualization Studio, CGI Moon Kit</a> (LRO LROC);
       Mars — Viking MDIM 2.1 colour mosaic, NASA/JPL/USGS, via <a href="https://trek.nasa.gov/mars/" target="_blank" rel="noopener">NASA Mars Trek</a>.</span>
@@ -210,6 +216,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2.0.1/dist/chartjs-chart-matrix.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.46.2/dist/globe.gl.min.js"></script>
-  <script type="module" src="js/app.js?v=202611140724"></script>
+  <script type="module" src="js/app.js?v=202611140743"></script>
 </body>
 </html>
