@@ -5,7 +5,9 @@
 after test-bed interventions → data/what_if.csv.
 
 Input:  data/sites.csv, data/rock_similarity.csv, data/interventions.csv, analysis/metrics.py
-Output: data/what_if.csv
+Output: data/what_if.csv         single interventions + the default plan per analog
+        data/what_if_combos.csv  score and criteria for EVERY combination of the score-changing
+                                 interventions (the site's toggles look the result up here)
 
 How an intervention works: it changes parameters of the analog's TEST BED (not of the
 site itself): `sets` = sites.csv columns, `value` = a literal (e.g. rock class
@@ -187,12 +189,36 @@ def compute():
             "warning_en": "; ".join(sorted(c for c in weak if c not in covered)),  # weak criteria no field fix covers
         })
 
-    return rows, plans
+    # ---- pass 3: every combination of the metric-changing interventions (for the site's toggles)
+    from itertools import combinations
+    virtual, combo_keys = [], []
+    for aid, (a, ref, base, plan, weak) in plans.items():
+        usable = [iv for iv in metric_ivs if applies(iv, ref["body"])]
+        for n in range(len(usable) + 1):
+            for combo in combinations(usable, n):
+                cur = dict(a)
+                for iv in combo:  # each intervention sets its own columns, so the order does not matter
+                    cur = apply(cur, ref, iv)
+                key = "+".join(sorted(iv["intervention_id"] for iv in combo))
+                cur["site_id"] = f"{aid}{SEP}combo{len(combo_keys)}"
+                virtual.append(cur)
+                combo_keys.append((aid, ref, key, cur["site_id"]))
+    scores = run_metrics(sites + virtual, header)
+    combos = []
+    for aid, ref, key, vid in combo_keys:
+        r = pick(vid, ref)
+        combos.append({"analog_id": aid, "reference_id": ref["site_id"], "scenario": r["scenario"], "combo": key,
+                       "score": r["score"], **{f"s_{c}": r.get(f"s_{c}", "") for c in CRITERIA}})
+    return rows, plans, combos
 
 
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    rows, plans = compute()
+    rows, plans, combos = compute()
+    with open(DATA / "what_if_combos.csv", "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(combos[0]), lineterminator="\n")
+        w.writeheader()
+        w.writerows(combos)
     fields = list(rows[0])
     with open(DATA / "what_if.csv", "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields, lineterminator="\n")

@@ -304,6 +304,16 @@ export function loadLimits(url = 'data/limits.json') {
   return loadJsonOptional(url);
 }
 
+/** Parse a CSV file; null (and a console warning) if it is missing or broken. */
+export async function loadCsvOptional(url) {
+  try {
+    return await parseCsv(url);
+  } catch (err) {
+    console.warn(`[data] ${url} not loaded`, err);
+    return null;
+  }
+}
+
 /** Fetch a JSON file; null (and a console warning) if it is missing or broken. */
 export async function loadJsonOptional(url) {
   try {

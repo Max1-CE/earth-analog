@@ -253,7 +253,7 @@ if (DATA / "what_if.csv").exists():
     check("what_if.csv: plan order by gain_per_effort; last step = default score_after", not bad, "; ".join(bad))
 
     # recompute everything with the real metrics.py and compare
-    fresh, _ = wi.compute()
+    fresh, _, fresh_combos = wi.compute()
     key = lambda r: (r["analog_id"], r["intervention_id"])  # noqa: E731
     fresh_by = {key(r): r for r in fresh}
     bad = []
@@ -268,6 +268,22 @@ if (DATA / "what_if.csv").exists():
                 bad.append(f"{key(r)} {col}: {r[col]} vs {f[col]}")
     check(f"what_if.csv: score_after reproduces with metrics.py (|Δ| < {METRIC_TOL})", not bad,
           "; ".join(bad[:5]) or f"{len(wif)} rows")
+
+    combos = read_csv("what_if_combos.csv")
+    cmap = {(c["analog_id"], c["combo"]): c for c in combos}
+    bad = []
+    for c in fresh_combos:
+        old = cmap.get((c["analog_id"], c["combo"]))
+        if old is None or abs(num(old["score"]) - num(c["score"])) >= METRIC_TOL:
+            bad.append(f"{c['analog_id']} [{c['combo']}]")
+    for d in defaults:
+        key = "+".join(sorted(r["intervention_id"] for r in wif if r["analog_id"] == d["analog_id"]
+                              and r["in_default"] == "true" and r["intervention_id"] != "default"))
+        c = cmap.get((d["analog_id"], key))
+        if c is None or abs(num(c["score"]) - num(d["score_after"])) >= METRIC_TOL:
+            bad.append(f"{d['analog_id']}: default combo {key!r} {c and c['score']} vs {d['score_after']}")
+    check("what_if_combos.csv: every toggle combination reproduces; default combo = default score", not bad,
+          "; ".join(bad[:5]) or f"{len(combos)} combinations")
 
     already = [d["analog_id"] for d in defaults if not d["weak_criteria"]]
     check("what_if.csv: analogs with no criterion < 0.5 (\"Already a close analog\")", True,

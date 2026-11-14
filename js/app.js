@@ -9,7 +9,7 @@
  *       Analysis tab → renderAnalysis() (js/charts.js).
  */
 import {
-  loadAll, loadLimits, loadJsonOptional, BODIES, PARAMS, CRITERIA, SCENARIOS, statusInfo, sitesOnBody, references, analogsOf,
+  loadAll, loadLimits, loadJsonOptional, loadCsvOptional, BODIES, PARAMS, CRITERIA, SCENARIOS, statusInfo, sitesOnBody, references, analogsOf,
   formatCoords, formatValue,
 } from './data.js';
 import { MapView, mapKeyFor, projectionControl } from './maps.js';
@@ -17,6 +17,7 @@ import { ScoreBook, SCENARIO_CHOICES, breakdown, similarityLevel, MATCH_THRESHOL
 import { rankingChart, radarChart, heatmapChart, rawCharts, downloadPng, destroyAll, RAW_GROUPS } from './charts.js';
 import { GlobeStage, hasWebGL } from './globe.js';
 import { t, getLang, setLang, onLangChange, applyStatic, nSites, LANGS } from './i18n.js';
+import { gapButtonHtml, gapModel, renderGap, animateGap } from './closegap.js';
 
 const VIEWS = ['globe', 'earth', 'mars', 'moon', 'compare', 'analysis'];
 const MAP_VIEWS = ['earth', 'mars', 'moon', 'compare'];
@@ -31,6 +32,9 @@ const state = {
   sites: [],
   book: null,             // ScoreBook
   resources: null,       // data/resources.json (partner resources, footer)
+  whatIf: null,          // {rows, combos, interventions} from analysis/what_if.py, or null
+  closeGap: null,        // site_id of the analog shown in the "Close the gap" module
+  gapOn: null,           // Set of intervention_ids switched on in the module
   limitsByLang: {},       // {en: data/limits.json, uk: data/limits_uk.json}; either may be missing
   selected: null,         // Site shown in the sidebar
   referenceId: null,      // reference used for the selected analog (null = its pair)
@@ -235,7 +239,9 @@ function sitePopup(site) {
       <p class="popup__analog">${analogLine(site)}</p>
       <p class="popup__coords">${formatCoords(site.lat, site.lon)}</p>
       <button type="button" class="popup__btn" data-action="details">${escapeHtml(t('pop.more'))}</button>
+      ${state.whatIf ? gapButtonHtml(site) : ''}
     </footer>`;
+  el.querySelector('[data-action="close-gap"]')?.addEventListener('click', () => openCloseGap(site.id));
   return el;
 }
 
@@ -497,6 +503,7 @@ function renderAnalogSidebar(site) {
 
   return `
     ${siteHead(site)}
+    ${state.whatIf ? `<div class="gap-entry">${gapButtonHtml(site)}</div>` : ''}
     <section>
       <div class="section-row">
         <h3 class="section-title">${escapeHtml(t('sb.similarity'))}</h3>
@@ -777,6 +784,8 @@ function bindEvents() {
 
   const sidebar = $('#sidebar-content');
   sidebar.addEventListener('click', (e) => {
+    const gap = e.target.closest('[data-action="close-gap"]');
+    if (gap) { openCloseGap(gap.dataset.site); return; }
     const refPick = e.target.closest('[data-ref-pick]');
     if (refPick && state.selected) {
       state.referenceId = refPick.dataset.refPick;
@@ -811,7 +820,24 @@ function bindEvents() {
   $('#ctl-analog').addEventListener('change', (e) => { state.analysis.analogId = e.target.value; render(); });
   $$('[data-png]').forEach((b) => b.addEventListener('click', () => pngFor(b.dataset.png)));
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (state.closeGap) closeCloseGap({ toSite: true });
+    else closeSidebar();
+  });
+  const cg = $('#close-gap');
+  cg.addEventListener('change', (e) => {
+    const box = e.target.closest('.cg-toggle');
+    if (!box || !state.gapOn) return;
+    if (box.checked) state.gapOn.add(box.dataset.iv); else state.gapOn.delete(box.dataset.iv);
+    drawGap(true);
+  });
+  cg.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cg]');
+    if (b?.dataset.cg === 'reset') { state.gapOn = null; drawGap(true); }
+    if (b?.dataset.cg === 'back') closeCloseGap({ toSite: true });
+    if (e.target === cg) closeCloseGap({ toSite: true }); // click on the backdrop
+  });
   let resizeTimer;
   window.addEventListener('resize', () => {
     visibleMaps().forEach((m) => m.invalidate());
@@ -827,7 +853,10 @@ function bindEvents() {
  *   #view=earth&popup=DEV-HAU      (opens a popup — handy for screenshot tests)
  */
 function readHash() {
+  // #close-gap/<site_id>: open the "Close the gap" module (links, presentations)
+  const gapMatch = location.hash.match(/^#close-gap\/([^&]+)/);
   const h = new URLSearchParams(location.hash.slice(1));
+  if (gapMatch) return { closeGap: decodeURIComponent(gapMatch[1]) };
   if (VIEWS.includes(h.get('view'))) state.view = h.get('view');
   if (state.view === 'globe' && !WEBGL) state.view = 'earth'; // no WebGL → Leaflet maps
   if (['mars', 'moon'].includes(h.get('target'))) state.compareTarget = h.get('target');
@@ -840,6 +869,10 @@ function readHash() {
 }
 
 function writeHash() {
+  if (state.closeGap) {
+    history.replaceState(null, '', `#close-gap/${encodeURIComponent(state.closeGap)}`);
+    return;
+  }
   const h = new URLSearchParams({ view: state.view });
   if (state.view === 'compare') h.set('target', state.compareTarget);
   const moonShown = state.view === 'moon' || (state.view === 'compare' && state.compareTarget === 'moon');
@@ -869,6 +902,7 @@ function showStatus(html) {
 /** Language switch: redraw everything that holds text. Maps are rebuilt (legends, controls). */
 function relocalize() {
   renderResources();
+  if (state.closeGap) drawGap(false);
   for (const k of Object.keys(singleMaps)) { singleMaps[k]?.destroy(); delete singleMaps[k]; }
   compareMaps.earth?.destroy();
   compareMaps.target?.destroy();
@@ -877,6 +911,58 @@ function relocalize() {
   globeStage?.relocalize();
   render();
   if (state.selected && state.view !== 'globe') renderSidebar(state.selected);
+}
+
+/* ------------------------------------------------------------------ */
+/* "Close the gap" module (js/closegap.js, data from analysis/what_if.py) */
+/* ------------------------------------------------------------------ */
+
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+function currentGapModel() {
+  const site = byId(state.closeGap);
+  return site ? gapModel(site, byId(site.pairId), state.whatIf) : null;
+}
+
+function drawGap(animate) {
+  const model = currentGapModel();
+  if (!model) return;
+  if (!state.gapOn) state.gapOn = new Set(model.defaultOn); // default solution (also after Reset)
+  const el = $('#close-gap');
+  el.innerHTML = renderGap(model, state.gapOn, { limits: limitsData(), fmtCoords: formatCoords });
+  animateGap(el, !animate || prefersReducedMotion());
+}
+
+function openCloseGap(siteId, { instant = false } = {}) {
+  const site = byId(siteId);
+  if (!site || !site.analog_of || !state.whatIf || !gapModel(site, byId(site.pairId), state.whatIf)) return;
+  state.closeGap = site.id;
+  state.gapOn = null;
+  const el = $('#close-gap');
+  el.hidden = false;
+  document.body.classList.add('cg-open');
+  drawGap(!instant);
+  requestAnimationFrame(() => el.classList.add('is-open'));
+  el.querySelector('#cg-title')?.focus?.();
+  writeHash();
+}
+
+function closeCloseGap({ toSite = false } = {}) {
+  const site = byId(state.closeGap);
+  const el = $('#close-gap');
+  el.classList.remove('is-open');
+  document.body.classList.remove('cg-open');
+  setTimeout(() => { if (!state.closeGap) el.hidden = true; }, prefersReducedMotion() ? 0 : 300);
+  state.closeGap = null;
+  state.gapOn = null;
+  if (toSite && site) {
+    // "Back": to the point on the Earth map, details open
+    state.view = 'earth';
+    render();
+    selectSite(site);
+  } else {
+    writeHash();
+  }
 }
 
 /** Partner resources (data/resources.json) in a collapsible block above the footer credits. */
@@ -910,6 +996,8 @@ async function init() {
   try {
     const [data, limitsEn, limitsUk, resources] = await Promise.all([loadAll('data/'), loadLimits('data/limits.json'), loadLimits('data/limits_uk.json'), loadJsonOptional('data/resources.json')]);
     state.resources = resources;
+    const [wRows, wCombos, wIvs] = await Promise.all(['what_if.csv', 'what_if_combos.csv', 'interventions.csv'].map((f) => loadCsvOptional(`data/${f}`)));
+    state.whatIf = wRows && wCombos && wIvs ? { rows: wRows, combos: wCombos, interventions: wIvs } : null;
     state.sites = data.sites;
     state.book = new ScoreBook(data);
     state.limitsByLang = { en: limitsEn, uk: limitsUk };
@@ -919,7 +1007,7 @@ async function init() {
     showStatus(fileProto ? t('status.file') : escapeHtml(t('status.error', { e: err.message || err })));
   }
   renderResources();
-  const { site: siteId, popup: popupId, focus: focusId, group: groupId, globeMode } = readHash();
+  const { site: siteId, popup: popupId, focus: focusId, group: groupId, globeMode, closeGap: gapId } = readHash();
   if (!WEBGL) $('.tab[data-tab="globe"]').hidden = true;
   render();
   const site = siteId && byId(siteId);
@@ -939,6 +1027,8 @@ async function init() {
   // #popup=<site_id>: open that site's mini-window (after the initial fit has settled)
   const popupSite = popupId && byId(popupId);
   if (popupSite) setTimeout(() => visibleMaps().some((m) => m.openPopup(popupSite.id)), 400);
+
+  if (gapId) openCloseGap(gapId, { instant: true });
 
   // Debug handle for the console
   window.EA = { state, CRITERIA };
