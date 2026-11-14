@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+# SPDX-License-Identifier: MIT
+
 """Set a new cache-busting version for the site (run before each push).
 
 GitHub Pages lets browsers cache every file for 10 minutes. Without a version,

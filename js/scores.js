@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+// SPDX-License-Identifier: MIT
+
 /**
  * scores.js — queries over scores.csv / ranking.csv (computed by analysis/metrics.py).
  *

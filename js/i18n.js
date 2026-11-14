@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+// SPDX-License-Identifier: MIT
+
 /**
  * i18n.js — interface language (English / Ukrainian).
  *

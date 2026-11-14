@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+// SPDX-License-Identifier: MIT
+
 /**
  * maps.js — Leaflet map creation per planetary body.
  *

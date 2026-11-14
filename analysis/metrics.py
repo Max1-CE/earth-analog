@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+# SPDX-License-Identifier: MIT
+
 """Індекс схожості земних аналогів з еталонами Марса і Місяця.
 
 Вхід:  sites.csv, rock_similarity.csv (поруч зі скриптом)

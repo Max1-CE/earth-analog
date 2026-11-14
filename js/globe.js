@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+// SPDX-License-Identifier: MIT
+
 /**
  * globe.js — the "space infographic" home screen: 3D globes (globe.gl) and the
  * animated Earth → Mars / Moon transition.

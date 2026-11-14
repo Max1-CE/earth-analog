@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+# SPDX-License-Identifier: MIT
+
 """Check that data/limits_uk.json is a faithful translation of data/limits.json.
 
 Same structure (ids, addresses, criteria, references, list lengths) and the same

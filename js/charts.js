@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+// SPDX-License-Identifier: MIT
+
 /**
  * charts.js — Analysis charts (Chart.js 4 + chartjs-chart-matrix).
  *

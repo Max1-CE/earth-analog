@@ -91,3 +91,9 @@ automatically the next time the script runs.
 Screenshot tests: headless Chrome with `--force-prefers-reduced-motion` (charts and CSS
 transitions then render without animation); globes need `--use-angle=swiftshader --enable-unsafe-swiftshader`.
 Without WebGL the site opens on the Leaflet maps and hides the Globe tab.
+
+## License
+
+Copyright (c) 2026 Макс and the Earth Analog team. Licensed under the MIT License — see [LICENSE](LICENSE).
+
+Globe textures in `assets/textures/` come from NASA (see the credits in the site footer and `TODO.md`) and keep their original terms.
