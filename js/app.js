@@ -484,16 +484,6 @@ function renderLimits(body) {
       <ul class="mitigation-list">${mitigations}</ul>
       ${data.meta?.criteria_link_note ? `<p class="limits__muted">${escapeHtml(data.meta.criteria_link_note)}</p>` : ''}
     </section>
-
-    <section class="limits__conclusion">
-      <h3 class="section-title">${escapeHtml(t('lim.conclusion'))}</h3>
-      <h4 class="limits__sub">${escapeHtml(t('lim.goodAt'))}</h4>
-      <ul class="limits__list">${L.good_at.map((g) => {
-        const i = g.indexOf(':');
-        return i > 0 && i < 60 ? `<li><strong>${escapeHtml(g.slice(0, i))}:</strong>${escapeHtml(g.slice(i + 1))}</li>` : `<li>${escapeHtml(g)}</li>`;
-      }).join('')}</ul>
-      <p class="limits__text">${escapeHtml(L.conclusion)}</p>
-    </section>
     ${data.meta?.translation_note ? `<p class="limits__muted">${escapeHtml(data.meta.translation_note)}</p>` : ''}`;
 }
 

@@ -239,8 +239,6 @@ const DICT = {
   'lim.why': { en: 'Why it matters', uk: 'Чому це важливо' },
   'lim.general': { en: 'General (no specific factor)', uk: 'Загальне (без конкретного фактора)' },
   'lim.criteria': { en: 'criteria:', uk: 'критерії:' },
-  'lim.conclusion': { en: 'Conclusion', uk: 'Висновок' },
-  'lim.goodAt': { en: 'What Earth analogs are good at', uk: 'Що аналоги відтворюють добре' },
 
   /* ---------------- analysis view ---------------- */
   'an.noData': { en: 'Data not loaded.', uk: 'Дані не завантажено.' },

@@ -382,13 +382,6 @@ body[data-view="globe"] .lang-switch__btn[aria-pressed="true"] { background: var
 .limits__summary { font-size: 0.95rem; }
 .limits__muted, .muted { color: var(--c-muted); font-size: 0.8rem; }
 .limits__muted { margin-top: 8px !important; }
-.limits__sub { margin: 0 0 4px; font-size: 0.85rem; }
-.limits__list { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
-.limits__conclusion {
-  padding: 12px 14px; border-radius: 8px;
-  background: var(--c-surface-2); border-left: 3px solid var(--c-accent);
-}
-.limits__text { font-weight: 500; }
 .table-scroll { overflow-x: auto; }
 .limits-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.82rem; }
 .limits-table th, .limits-table td { padding: 8px; border-bottom: 1px solid var(--c-border); vertical-align: top; text-align: left; }
