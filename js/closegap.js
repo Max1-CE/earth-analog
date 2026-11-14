@@ -88,7 +88,7 @@ function summary(model, on, limits) {
 }
 
 /** Full module HTML for the current toggle state. */
-export function renderGap(model, on, { limits, fmtCoords }) {
+export function renderGap(model, on, { limits, fmtCoords, mode = 'list' }) {
   const { site, ref, def, ivs } = model;
   const target = site.analog_of;
   const before = num(def.score_before);
@@ -124,6 +124,16 @@ export function renderGap(model, on, { limits, fmtCoords }) {
       </li>`;
   };
 
+  const compact = CLASS_ORDER.map((cls) => {
+    const list = ivs.filter((r) => r.class === cls);
+    if (!list.length) return '';
+    return `<div class="cg-compact__group"><span class="cg-compact__cls">${esc(t(`gap.class.${cls}`))}</span>
+      ${list.map((r) => `<label class="cg-compact${on.has(r.intervention_id) ? ' is-on' : ''}">
+        <input type="checkbox" class="cg-toggle" data-iv="${esc(r.intervention_id)}" ${on.has(r.intervention_id) ? 'checked' : ''}>
+        <span class="cg-switch" aria-hidden="true"></span>
+        <span>${esc(L(r.meta, 'name') || r.intervention_id)}</span></label>`).join('')}</div>`;
+  }).join('');
+
   const groups = CLASS_ORDER.map((cls) => {
     const list = ivs.filter((r) => r.class === cls);
     if (!list.length) return '';
@@ -156,6 +166,10 @@ export function renderGap(model, on, { limits, fmtCoords }) {
           <p class="cg__sub">${esc(site.region)} · ${esc(fmtCoords(site.lat, site.lon, 1))} · ${esc(t('gap.ref', { body: BODIES[target]?.short ?? target }))}</p>
         </div>
         <div class="cg__actions">
+          <div class="segmented cg-mode" role="group" aria-label="${esc(t('gap.mode.aria'))}">
+            <button type="button" class="segmented__btn" data-cg-mode="list" aria-pressed="${mode === 'list'}">${esc(t('gap.mode.list'))}</button>
+            <button type="button" class="segmented__btn" data-cg-mode="chart" aria-pressed="${mode === 'chart'}">${esc(t('gap.mode.chart'))}</button>
+          </div>
           <button type="button" class="btn" data-cg="reset">${esc(t('gap.reset'))}</button>
           <button type="button" class="btn btn--primary" data-cg="back">${esc(t('gap.back'))}</button>
         </div>
@@ -174,6 +188,19 @@ export function renderGap(model, on, { limits, fmtCoords }) {
         ${warnings.length ? `<div class="cg-warnings">${warnings.map((r) => `<p>⚠ <strong>${esc(L(r.meta, 'name'))}:</strong> ${esc(L(r.meta, 'warning'))}</p>`).join('')}</div>` : ''}
       </section>
 
+      ${mode === 'chart' ? `
+      <div class="cg-compacts">${compact}</div>
+      <div class="cg-charts">
+        <section class="cg-chartbox">
+          <h3 class="cg-group__title">${esc(t('gap.chart.criteria'))}</h3>
+          <div class="cg-canvas"><canvas id="cg-chart-criteria" role="img" aria-label="${esc(t('gap.chart.criteria'))}"></canvas></div>
+        </section>
+        <section class="cg-chartbox">
+          <h3 class="cg-group__title">${esc(t('gap.chart.gain'))}</h3>
+          <div class="cg-canvas" style="height:${ivs.length * 34 + 70}px"><canvas id="cg-chart-gain" role="img" aria-label="${esc(t('gap.chart.gain'))}"></canvas></div>
+          <p class="cg-group__hint">${esc(t('gap.chart.gainHint'))}</p>
+        </section>
+      </div>` : `
       <div class="cg__grid">
         <div class="cg__ivs">${groups}</div>
         <section class="cg-criteria">
@@ -184,8 +211,126 @@ export function renderGap(model, on, { limits, fmtCoords }) {
           </table>
           <p class="cg-group__hint">${esc(t('gap.criteriaHint'))}</p>
         </section>
-      </div>
+      </div>`}
     </div>`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Chart mode (Chart.js, already loaded by index.html)                 */
+/* ------------------------------------------------------------------ */
+
+const charts = [];
+export function destroyGapCharts() { while (charts.length) charts.pop().destroy(); }
+
+/** '#9aa7b4' + 0.4 → rgba(); canvas colours from the module's theme tokens. */
+function rgba(color, a) {
+  const hex = color.trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(hex)) return color;
+  const n = parseInt(hex, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+/** Draw both bar charts for the current toggle state; values come from what_if*.csv only. */
+export function drawGapCharts(root, model, on, { reduced = false, threshold }) {
+  destroyGapCharts();
+  const Chart = window.Chart;
+  const panel = root.querySelector('.cg__panel');
+  if (!Chart || !panel) return;
+  const css = getComputedStyle(panel);
+  const v = (name) => css.getPropertyValue(name).trim();
+  // target colour (Mars rust / Moon silver-blue) stands out from the grey 'before' bars in both themes
+  const accent = v(panel.dataset.theme === 'moon' ? '--accent-moon' : '--accent-mars') || v('--c-accent');
+  const muted = v('--c-muted');
+  const text = v('--c-text');
+  const grid = rgba(v('--c-border'), 0.6);
+  const font = { family: css.fontFamily };
+  const base = {
+    responsive: true, maintainAspectRatio: false, locale: 'en', animation: reduced ? false : { duration: 600 },
+    plugins: { legend: { labels: { color: text, font, boxWidth: 12 } }, tooltip: { titleFont: font, bodyFont: font } },
+  };
+
+  // 1) criteria: before vs after (grouped bars), dashed threshold line
+  const baseCombo = model.comboFor(new Set());
+  const combo = model.comboFor(on);
+  const crit = CRITERIA.filter((c) => num(baseCombo?.[`s_${c.key}`]) !== null);
+  const thresholdLine = {
+    id: 'cgThreshold',
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea: a, scales: { y } } = chart;
+      const py = y.getPixelForValue(threshold);
+      ctx.save();
+      ctx.strokeStyle = '#f0c674'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(a.left, py); ctx.lineTo(a.right, py); ctx.stroke();
+      ctx.setLineDash([]); ctx.fillStyle = '#f0c674'; ctx.font = `11px ${font.family}`; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+      ctx.fillText(t('gap.chart.threshold', { t: threshold }), a.right - 4, py - 3);
+      ctx.restore();
+    },
+  };
+  const c1 = root.querySelector('#cg-chart-criteria');
+  if (c1) {
+    charts.push(new Chart(c1, {
+      type: 'bar',
+      data: {
+        labels: crit.map((c) => c.label),
+        datasets: [
+          { label: t('gap.before'), data: crit.map((c) => num(baseCombo[`s_${c.key}`])), backgroundColor: rgba(muted, 0.28), borderColor: rgba(muted, 0.8), borderWidth: 1, borderDash: [4, 3], borderRadius: 3 },
+          { label: t('gap.after'), data: crit.map((c) => num(combo?.[`s_${c.key}`])), backgroundColor: rgba(accent, 0.85), borderColor: accent, borderWidth: 1, borderRadius: 3 },
+        ],
+      },
+      options: {
+        ...base,
+        scales: {
+          x: { ticks: { color: text, font, autoSkip: false, maxRotation: 45 }, grid: { display: false } },
+          y: { min: 0, max: 1, ticks: { color: muted, font, stepSize: 0.25 }, grid: { color: grid } },
+        },
+        plugins: { ...base.plugins, tooltip: { ...base.plugins.tooltip, callbacks: { label: (c) => `${c.dataset.label}: ${f2(c.raw)}` } } },
+      },
+      plugins: [thresholdLine],
+    }));
+  }
+
+  // 2) gain of each intervention alone, coloured by class; switched-off ones faded
+  const CLASS_COLOR = { field: accent, chamber: '#6aa9ff', mechanical: muted, partial: muted };
+  const list = CLASS_ORDER.flatMap((cls) => model.ivs.filter((r) => r.class === cls)
+    .sort((a, b) => num(b.gain) - num(a.gain)));
+  const c2 = root.querySelector('#cg-chart-gain');
+  if (c2) {
+    charts.push(new Chart(c2, {
+      type: 'bar',
+      data: {
+        labels: list.map((r) => L(r.meta, 'name') || r.intervention_id),
+        datasets: [{
+          label: t('gap.chart.gainLabel'),
+          data: list.map((r) => num(r.gain)),
+          backgroundColor: list.map((r) => rgba(CLASS_COLOR[r.class] ?? muted, on.has(r.intervention_id) ? 0.9 : 0.25)),
+          borderColor: list.map((r) => CLASS_COLOR[r.class] ?? muted),
+          borderWidth: list.map((r) => (on.has(r.intervention_id) ? 2 : 1)),
+          borderRadius: 3,
+        }],
+      },
+      options: {
+        ...base,
+        indexAxis: 'y',
+        scales: {
+          x: { min: 0, ticks: { color: muted, font }, grid: { color: grid }, title: { display: true, text: t('gap.chart.gainAxis'), color: muted, font } },
+          y: { ticks: { color: text, font, autoSkip: false }, grid: { display: false } },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...base.plugins.tooltip,
+            callbacks: {
+              label: (c) => {
+                const r = list[c.dataIndex];
+                const state = on.has(r.intervention_id) ? t('gap.chart.on') : t('gap.chart.off');
+                return `${signed(c.raw)} · ${t(`gap.class.${r.class}`)} · ${state}${r.meta?.sets ? '' : ` · ${t('gap.noScore')}`}`;
+              },
+            },
+          },
+        },
+      },
+    }));
+  }
 }
 
 /** Animate the "after" bar and number from the before value (instant with reduced motion). */

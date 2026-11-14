@@ -17,7 +17,7 @@ import { ScoreBook, SCENARIO_CHOICES, breakdown, similarityLevel, MATCH_THRESHOL
 import { rankingChart, radarChart, heatmapChart, rawCharts, downloadPng, destroyAll, RAW_GROUPS } from './charts.js';
 import { GlobeStage, hasWebGL } from './globe.js';
 import { t, getLang, setLang, onLangChange, applyStatic, nSites, LANGS } from './i18n.js';
-import { gapButtonHtml, gapModel, renderGap, animateGap } from './closegap.js';
+import { gapButtonHtml, gapModel, renderGap, animateGap, drawGapCharts, destroyGapCharts } from './closegap.js';
 
 const VIEWS = ['globe', 'earth', 'mars', 'moon', 'compare', 'analysis'];
 const MAP_VIEWS = ['earth', 'mars', 'moon', 'compare'];
@@ -35,6 +35,7 @@ const state = {
   whatIf: null,          // {rows, combos, interventions} from analysis/what_if.py, or null
   closeGap: null,        // site_id of the analog shown in the "Close the gap" module
   gapOn: null,           // Set of intervention_ids switched on in the module
+  gapMode: 'list',       // 'list' | 'chart' (bar charts), kept in the hash as &view=chart
   limitsByLang: {},       // {en: data/limits.json, uk: data/limits_uk.json}; either may be missing
   selected: null,         // Site shown in the sidebar
   referenceId: null,      // reference used for the selected analog (null = its pair)
@@ -835,6 +836,8 @@ function bindEvents() {
   cg.addEventListener('click', (e) => {
     const b = e.target.closest('[data-cg]');
     if (b?.dataset.cg === 'reset') { state.gapOn = null; drawGap(true); }
+    const mode = e.target.closest('[data-cg-mode]');
+    if (mode && mode.dataset.cgMode !== state.gapMode) { state.gapMode = mode.dataset.cgMode; drawGap(false); writeHash(); }
     if (b?.dataset.cg === 'back') closeCloseGap({ toSite: true });
     if (e.target === cg) closeCloseGap({ toSite: true }); // click on the backdrop
   });
@@ -856,7 +859,7 @@ function readHash() {
   // #close-gap/<site_id>: open the "Close the gap" module (links, presentations)
   const gapMatch = location.hash.match(/^#close-gap\/([^&]+)/);
   const h = new URLSearchParams(location.hash.slice(1));
-  if (gapMatch) return { closeGap: decodeURIComponent(gapMatch[1]) };
+  if (gapMatch) return { closeGap: decodeURIComponent(gapMatch[1]), gapMode: h.get('view') === 'chart' ? 'chart' : 'list' };
   if (VIEWS.includes(h.get('view'))) state.view = h.get('view');
   if (state.view === 'globe' && !WEBGL) state.view = 'earth'; // no WebGL → Leaflet maps
   if (['mars', 'moon'].includes(h.get('target'))) state.compareTarget = h.get('target');
@@ -870,7 +873,7 @@ function readHash() {
 
 function writeHash() {
   if (state.closeGap) {
-    history.replaceState(null, '', `#close-gap/${encodeURIComponent(state.closeGap)}`);
+    history.replaceState(null, '', `#close-gap/${encodeURIComponent(state.closeGap)}${state.gapMode === 'chart' ? '&view=chart' : ''}`);
     return;
   }
   const h = new URLSearchParams({ view: state.view });
@@ -929,8 +932,12 @@ function drawGap(animate) {
   if (!model) return;
   if (!state.gapOn) state.gapOn = new Set(model.defaultOn); // default solution (also after Reset)
   const el = $('#close-gap');
-  el.innerHTML = renderGap(model, state.gapOn, { limits: limitsData(), fmtCoords: formatCoords });
+  destroyGapCharts();
+  el.innerHTML = renderGap(model, state.gapOn, { limits: limitsData(), fmtCoords: formatCoords, mode: state.gapMode });
   animateGap(el, !animate || prefersReducedMotion());
+  if (state.gapMode === 'chart') {
+    requestAnimationFrame(() => drawGapCharts(el, model, state.gapOn, { reduced: !animate || prefersReducedMotion(), threshold: MITIGATION_THRESHOLD }));
+  }
 }
 
 function openCloseGap(siteId, { instant = false } = {}) {
@@ -952,7 +959,8 @@ function closeCloseGap({ toSite = false } = {}) {
   const el = $('#close-gap');
   el.classList.remove('is-open');
   document.body.classList.remove('cg-open');
-  setTimeout(() => { if (!state.closeGap) el.hidden = true; }, prefersReducedMotion() ? 0 : 300);
+  destroyGapCharts();
+  setTimeout(() => { if (!state.closeGap) { el.hidden = true; el.innerHTML = ''; } }, prefersReducedMotion() ? 0 : 300);
   state.closeGap = null;
   state.gapOn = null;
   if (toSite && site) {
@@ -1007,7 +1015,8 @@ async function init() {
     showStatus(fileProto ? t('status.file') : escapeHtml(t('status.error', { e: err.message || err })));
   }
   renderResources();
-  const { site: siteId, popup: popupId, focus: focusId, group: groupId, globeMode, closeGap: gapId } = readHash();
+  const { site: siteId, popup: popupId, focus: focusId, group: groupId, globeMode, closeGap: gapId, gapMode } = readHash();
+  if (gapMode) state.gapMode = gapMode;
   if (!WEBGL) $('.tab[data-tab="globe"]').hidden = true;
   render();
   const site = siteId && byId(siteId);
