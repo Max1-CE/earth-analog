@@ -3,7 +3,8 @@
  * animated Earth → Mars / Moon transition.
  *
  * States of the stage (data-mode on #globe-stage):
- *   idle     Earth rotates slowly, analog points pulse
+ *   idle     Earth rotates slowly, analog points pulse; close sites are one group marker
+ *   group    a group marker was clicked: camera zooms in, members fan out, card lists them
  *   focus    a point was clicked: rotation stops, camera flies to it, card slides in
  *   compare  Earth shrinks to the left, the target globe comes in from the right and
  *            turns to the reference point (pair_id); radar between, details below
@@ -36,6 +37,74 @@ const FALLBACK_COLORS = { earth: '#1d4f7a', mars: '#a4522f', moon: '#8d97a3' };
 
 /** Marker colours: Mars analogs orange, Moon analogs silver (and the references themselves). */
 export const MARKER_COLORS = { mars: '#ff8a4c', moon: '#d7e2f0' };
+
+/**
+ * Sites that sit too close together to click on the whole-Earth view. Each group is one
+ * marker while the globe is idle; clicking it zooms in and fans the members out on a
+ * small ring (SPREAD.ringDeg), with a thin leader line back to each site's exact spot.
+ * Analogs not listed here stay single points.
+ */
+export const GROUPS = [
+  { id: 'arctic', name: 'Devon & Ellesmere islands', region: 'Canadian High Arctic', members: ['DEV-HAU', 'DEV-PLT', 'ELL-FOS'] },
+  { id: 'mcmurdo', name: 'McMurdo Dry Valleys', region: 'Antarctica', members: ['MDV-TAY', 'MDV-WRI', 'MDV-DJP', 'MDV-BEA'] },
+  { id: 'mistastin', name: 'Mistastin Lake crater', region: 'Labrador, Canada', members: ['MIS-ANO', 'MIS-MLT'] },
+  { id: 'namib', name: 'Namib Desert', region: 'Namibia', members: ['NAM-DUN', 'NAM-RK', 'NAM-GRV'] },
+];
+
+/** Fan-out geometry for an open group (degrees of arc, globe radii for altitude). */
+export const SPREAD = { ringDeg: 5.5, altitude: 1.45, compareAltitude: 1.7, memberRadius: 1.0, focusedRadius: 1.3, anchorRadius: 0.28 };
+
+const toRad = (d) => (d * Math.PI) / 180;
+const toDeg = (r) => (r * 180) / Math.PI;
+
+/** Mean direction of points on the sphere (works across the date line and near poles). */
+function sphericalCenter(pts) {
+  let x = 0; let y = 0; let z = 0;
+  for (const p of pts) {
+    const la = toRad(p.lat); const lo = toRad(p.lon);
+    x += Math.cos(la) * Math.cos(lo); y += Math.cos(la) * Math.sin(lo); z += Math.sin(la);
+  }
+  return { lat: toDeg(Math.atan2(z, Math.hypot(x, y))), lon: toDeg(Math.atan2(y, x)) };
+}
+
+/** Initial bearing (rad) from a to b. */
+function bearing(a, b) {
+  const la1 = toRad(a.lat); const la2 = toRad(b.lat); const dl = toRad(b.lon - a.lon);
+  return Math.atan2(Math.sin(dl) * Math.cos(la2), Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dl));
+}
+
+/** Point at angular distance dDeg from p along bearing brg (rad). */
+function destination(p, brg, dDeg) {
+  const d = toRad(dDeg); const la1 = toRad(p.lat); const lo1 = toRad(p.lon);
+  const la2 = Math.asin(Math.sin(la1) * Math.cos(d) + Math.cos(la1) * Math.sin(d) * Math.cos(brg));
+  const lo2 = lo1 + Math.atan2(Math.sin(brg) * Math.sin(d) * Math.cos(la1), Math.cos(d) - Math.sin(la1) * Math.sin(la2));
+  return { lat: toDeg(la2), lon: ((toDeg(lo2) + 540) % 360) - 180 };
+}
+
+/**
+ * Resolve GROUPS against the loaded sites: centre, colour and a fanned-out display
+ * position for every member. Members keep their geographic order around the ring
+ * (sorted by bearing from the centre), evenly spaced.
+ */
+export function buildGroups(analogs) {
+  const byId = new Map(analogs.map((s) => [s.id, s]));
+  const groups = [];
+  for (const cfg of GROUPS) {
+    const members = cfg.members.map((id) => byId.get(id)).filter(Boolean);
+    if (members.length < 2) continue; // a group of one is just a point
+    const center = sphericalCenter(members);
+    const ordered = members
+      .map((s) => ({ s, b: bearing(center, s) }))
+      .sort((p, q) => p.b - q.b);
+    const step = (2 * Math.PI) / ordered.length;
+    const start = ordered[0].b;
+    const spread = new Map(ordered.map(({ s }, i) => [s, destination(center, start + i * step, SPREAD.ringDeg)]));
+    const bodies = new Set(members.map((s) => s.analog_of));
+    const color = bodies.size === 1 ? MARKER_COLORS[[...bodies][0]] ?? '#ffffff' : '#ffffff';
+    groups.push({ ...cfg, members, lat: center.lat, lon: center.lon, color, spread });
+  }
+  return groups;
+}
 
 /** Atmosphere glow per body. */
 const ATMOSPHERE = { earth: '#5fc8ff', mars: '#ff9a62', moon: '#c7d6ea' };
@@ -95,6 +164,13 @@ function makeGlobe(el, body) {
     .pointRadius((d) => d.radius ?? 0.7)
     .pointColor((d) => d.color)
     .pointLabel((d) => `<div class="globe-tip">${d.label}</div>`)
+    .pathPoints('path')
+    .pathPointLat((p) => p[0])
+    .pathPointLng((p) => p[1])
+    .pathPointAlt(0.006)
+    .pathColor((d) => hexAlpha(d.color, 0.7))
+    .pathStroke(null)
+    .pathTransitionDuration(0)
     .ringColor((d) => (t) => hexAlpha(d.color, 1 - t))
     .ringMaxRadius(3.6)
     .ringPropagationSpeed(1.6)
@@ -149,17 +225,23 @@ export class GlobeStage {
     this.card = root.querySelector('#globe-card');
     this.mode = 'idle';
     this.focused = null;   // analog site
+    this.group = null;     // open (fanned-out) group, see GROUPS
     this.reference = null; // reference site in compare mode
     this.targetBody = null;
     this.timers = [];
 
+    this.groups = buildGroups(hooks.analogs);
+    this.groupOf = new Map(this.groups.flatMap((g) => g.members.map((s) => [s, g])));
+
     const earthEl = root.querySelector('#globe-earth .globe-canvas');
     this.earth = makeGlobe(earthEl, 'earth');
     this.earth
-      .pointsData(hooks.analogs.map((s) => ({ site: s, lat: s.lat, lng: s.lon, color: MARKER_COLORS[s.analog_of] ?? '#ffffff', label: escapeHtml(s.name) })))
-      .ringsData(reducedMotion() ? [] : hooks.analogs.map((s) => ({ lat: s.lat, lng: s.lon, color: MARKER_COLORS[s.analog_of] ?? '#ffffff' })))
-      .onPointClick((d) => this.focus(d.site))
+      .onPointClick((d) => {
+        if (d.kind === 'group') this.openGroup(d.group);
+        else this.focus(d.site);
+      })
       .onPointHover((d) => { earthEl.style.cursor = d ? 'pointer' : 'grab'; });
+    this.renderEarthMarkers();
     this.earth.pointOfView({ lat: 25, lng: 10, altitude: ALTITUDE.idle }, 0);
     this.setRotate(true);
 
@@ -206,16 +288,76 @@ export class GlobeStage {
 
   resume() { this.earth.resumeAnimation(); if (this.mode === 'compare') this.target?.resumeAnimation(); this.resize(); }
 
+  /* ---------- Earth markers (singles, collapsed groups, the open group) ---------- */
+
+  /** Rebuild the Earth's points, rings and leader lines from the current state. */
+  renderEarthMarkers() {
+    const pts = [];
+    const rings = [];
+    const paths = [];
+    const colorOf = (s) => MARKER_COLORS[s.analog_of] ?? '#ffffff';
+    for (const s of this.hooks.analogs) {
+      if (this.groupOf.has(s)) continue;
+      pts.push({ kind: 'site', site: s, lat: s.lat, lng: s.lon, color: colorOf(s), radius: s === this.focused ? 1.1 : 0.7, label: escapeHtml(s.name) });
+      rings.push({ lat: s.lat, lng: s.lon, color: colorOf(s) });
+    }
+    for (const g of this.groups) {
+      if (g !== this.group) {
+        const names = g.members.map((s) => `<br>· ${escapeHtml(s.name)}`).join('');
+        pts.push({ kind: 'group', group: g, lat: g.lat, lng: g.lon, color: g.color, radius: 1.05, label: `<strong>${escapeHtml(g.name)}</strong> · ${g.members.length} sites${names}` });
+        rings.push({ lat: g.lat, lng: g.lon, color: g.color });
+        continue;
+      }
+      for (const s of g.members) {
+        const p = g.spread.get(s);
+        const color = colorOf(s);
+        const isFocused = s === this.focused;
+        pts.push({ kind: 'site', site: s, lat: p.lat, lng: p.lon, color, radius: isFocused ? SPREAD.focusedRadius : SPREAD.memberRadius, label: escapeHtml(s.name) });
+        pts.push({ kind: 'anchor', site: s, lat: s.lat, lng: s.lon, color: '#ffffff', radius: SPREAD.anchorRadius, label: `${escapeHtml(s.name)} · exact location` });
+        paths.push({ path: [[s.lat, s.lon], [p.lat, p.lon]], color });
+        if (isFocused || !this.focused) rings.push({ lat: p.lat, lng: p.lon, color });
+      }
+    }
+    this.earth
+      .pointsData(pts)
+      .pathsData(paths)
+      .ringsData(reducedMotion() ? [] : rings);
+  }
+
+  /** Where the camera looks at a site: its fanned-out spot if it belongs to the open group. */
+  viewOf(site) {
+    const p = this.group?.spread.get(site);
+    return p ? { lat: p.lat, lng: p.lon } : { lat: site.lat, lng: site.lon };
+  }
+
+  /* ---------- step 0: open a group of close sites ---------- */
+
+  openGroup(group, { instant = false } = {}) {
+    if (this.mode === 'compare' || !group) return;
+    this.clearTimers();
+    this.group = group;
+    this.focused = null;
+    this.setRotate(false);
+    this.renderEarthMarkers();
+    this.earth.pointOfView({ lat: group.lat, lng: group.lon, altitude: SPREAD.altitude }, instant ? 0 : this.dur(TIMING.fly));
+    this.card.innerHTML = this.hooks.groupCardHtml(group);
+    this.card.hidden = false;
+    requestAnimationFrame(() => this.card.classList.add('is-open'));
+    this.setMode('group');
+  }
+
   /* ---------- step 1: focus a point ---------- */
 
   focus(site, { instant = false } = {}) {
     if (this.mode === 'compare') return;
     this.clearTimers();
     this.focused = site;
+    this.group = this.groupOf.get(site) ?? null;
     this.setRotate(false);
-    this.earth.pointOfView({ lat: site.lat, lng: site.lon, altitude: ALTITUDE.focus }, instant ? 0 : this.dur(TIMING.fly));
-    this.earth.pointRadius((d) => (d.site === site ? 1.1 : 0.7));
-    this.card.innerHTML = this.hooks.cardHtml(site);
+    this.renderEarthMarkers();
+    const altitude = this.group ? SPREAD.altitude : ALTITUDE.focus;
+    this.earth.pointOfView({ ...this.viewOf(site), altitude }, instant ? 0 : this.dur(TIMING.fly));
+    this.card.innerHTML = this.hooks.cardHtml(site, this.group);
     this.card.hidden = false;
     requestAnimationFrame(() => this.card.classList.add('is-open'));
     this.setMode('focus');
@@ -251,10 +393,12 @@ export class GlobeStage {
     const alt = ALTITUDE.target;
     this.target.pointOfView({ lat: reference.lat * 0.4, lng: reference.lon - 110, altitude: 3.2 }, 0);
     this.target.controls().autoRotate = false;
-    this.earth.pointOfView({ lat: this.focused.lat, lng: this.focused.lon, altitude: ALTITUDE.compare }, instant ? 0 : this.dur(TIMING.compare));
+    const earthAlt = this.group ? SPREAD.compareAltitude : ALTITUDE.compare;
+    this.earth.pointOfView({ ...this.viewOf(this.focused), altitude: earthAlt }, instant ? 0 : this.dur(TIMING.compare));
 
     this.card.classList.remove('is-open');
     this.setMode('compare');
+    this.renderEarthMarkers();
     requestAnimationFrame(() => {
       this.target.pointOfView({ lat: reference.lat, lng: reference.lon, altitude: alt }, instant ? 0 : this.dur(TIMING.compare));
     });
@@ -269,22 +413,32 @@ export class GlobeStage {
     if (this.mode === 'compare') {
       this.hooks.onBack?.('compare');
       this.target.pointOfView({ lat: this.reference.lat * 0.4, lng: this.reference.lon - 110, altitude: 3.2 }, this.dur(TIMING.compare));
-      this.earth.pointOfView({ lat: this.focused.lat, lng: this.focused.lon, altitude: ALTITUDE.focus }, this.dur(TIMING.compare));
+      const altitude = this.group ? SPREAD.altitude : ALTITUDE.focus;
+      this.earth.pointOfView({ ...this.viewOf(this.focused), altitude }, this.dur(TIMING.compare));
       this.reference = null;
       this.setMode('focus');
+      this.renderEarthMarkers();
       this.card.classList.add('is-open');
       this.later(() => this.target?.pauseAnimation(), TIMING.compare);
       return;
     }
-    if (this.mode === 'focus') {
+    if (this.mode === 'focus' && this.group) {
+      // a grouped site goes back to its group's list, not straight to the whole Earth
       this.hooks.onBack?.('focus');
+      this.openGroup(this.group);
+      return;
+    }
+    if (this.mode === 'focus' || this.mode === 'group') {
+      this.hooks.onBack?.(this.mode);
+      const from = this.group ?? this.focused;
       this.card.classList.remove('is-open');
       this.later(() => { this.card.hidden = true; }, 600);
-      this.earth.pointRadius(() => 0.7);
-      this.earth.pointOfView({ lat: this.focused.lat, lng: this.focused.lon, altitude: ALTITUDE.idle }, this.dur(TIMING.fly));
+      this.earth.pointOfView({ lat: from.lat, lng: from.lon, altitude: ALTITUDE.idle }, this.dur(TIMING.fly));
       this.focused = null;
-      this.setRotate(true);
+      this.group = null;
       this.setMode('idle');
+      this.renderEarthMarkers();
+      this.setRotate(true);
     }
   }
 }

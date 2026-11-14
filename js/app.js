@@ -637,7 +637,30 @@ function shortText(text, max = 3) {
   return parts.slice(0, max).join('').trim();
 }
 
-function globeCardHtml(site) {
+/** Card for an open group of close sites: one row per member, click to focus it. */
+function globeGroupCardHtml(group) {
+  const bodies = new Set(group.members.map((s) => s.analog_of));
+  const badge = bodies.size === 1
+    ? `<span class="badge badge--${[...bodies][0]}">Analogs of ${[...bodies][0] === 'moon' ? 'Moon' : 'Mars'}</span>`
+    : '<span class="badge">Mars & Moon analogs</span>';
+  const rows = group.members.map((s) => {
+    const ref = byId(s.pairId);
+    const row = ref ? state.book.get(s.id, ref.id, 'auto') : null;
+    return `<li><button type="button" class="group-pick" data-gaction="pick" data-site="${escapeHtml(s.id)}">
+        <span class="group-pick__dot group-pick__dot--${s.analog_of ?? 'earth'}" aria-hidden="true"></span>
+        <span class="group-pick__name">${escapeHtml(s.name)}<small>${ref ? `vs ${escapeHtml(ref.name)}` : escapeHtml(s.region)}</small></span>
+        ${row ? `<strong class="group-pick__score">${fmtScore(row.score)}</strong>` : ''}
+      </button></li>`;
+  }).join('');
+  return `
+    ${badge}
+    <h3 class="site-card__title">${escapeHtml(group.name)}</h3>
+    <p class="kicker kicker--small">${escapeHtml(group.region)} · ${group.members.length} sites · ${formatCoords(group.lat, group.lon, 1)}</p>
+    <p class="site-card__text">These sites lie too close together to pick on the whole globe, so they are spread out on a small ring. Thin lines lead to each exact location.</p>
+    <ul class="group-list">${rows}</ul>`;
+}
+
+function globeCardHtml(site, group = null) {
   const target = site.analog_of;
   const ref = byId(site.pairId);
   const row = ref ? state.book.get(site.id, ref.id, 'auto') : null;
@@ -652,6 +675,7 @@ function globeCardHtml(site) {
     <span class="badge badge--${target ?? 'earth'}">Analog of ${target === 'moon' ? 'Moon' : 'Mars'}</span>
     <h3 class="site-card__title">${escapeHtml(site.name)}</h3>
     <p class="kicker kicker--small">${escapeHtml(site.region)} · ${formatCoords(site.lat, site.lon, 1)}</p>
+    ${group ? `<p class="site-card__group">Part of <strong>${escapeHtml(group.name)}</strong> · ${group.members.length} sites · “Back” returns to the list</p>` : ''}
     ${photo}
     <p class="site-card__text">${escapeHtml(shortText(site.description))}</p>
     ${row ? `<p class="site-card__sim"><span class="kicker kicker--small">Similarity</span> <strong>${fmtScore(row.score)}</strong>
@@ -691,6 +715,7 @@ function ensureGlobe() {
       references: references(state.sites),
       byId,
       cardHtml: globeCardHtml,
+      groupCardHtml: globeGroupCardHtml,
       onCompare: globeCompare,
       onBack: (from) => {
         if (from === 'compare') {
@@ -736,8 +761,14 @@ function bindEvents() {
   $('#globe-back').addEventListener('click', () => globeStage?.back());
   $('#globe-card').addEventListener('click', (e) => {
     const a = e.target.closest('[data-gaction]');
-    if (!a || !globeStage?.focused) return;
+    if (!a || !globeStage) return;
+    if (a.dataset.gaction === 'pick') {
+      const picked = byId(a.dataset.site);
+      if (picked) globeStage.focus(picked);
+      return;
+    }
     const site = globeStage.focused;
+    if (!site) return;
     if (a.dataset.gaction === 'compare') globeStage.compare(byId(site.pairId));
     if (a.dataset.gaction === 'map') {
       state.view = 'earth';
@@ -811,7 +842,7 @@ function readHash() {
   if (SCENARIO_CHOICES.some((c) => c.key === h.get('scn'))) state.scenario = h.get('scn');
   state.analysis.referenceId = h.get('ref');
   state.analysis.analogId = h.get('analog');
-  return { site: h.get('site'), popup: h.get('popup'), focus: h.get('focus'), globeMode: h.get('g') };
+  return { site: h.get('site'), popup: h.get('popup'), focus: h.get('focus'), group: h.get('group'), globeMode: h.get('g') };
 }
 
 function writeHash() {
@@ -826,6 +857,8 @@ function writeHash() {
   if (state.view === 'globe' && globeStage?.focused) {
     h.set('focus', globeStage.focused.id);
     if (globeStage.mode === 'compare') h.set('g', 'compare');
+  } else if (state.view === 'globe' && globeStage?.mode === 'group') {
+    h.set('group', globeStage.group.id);
   }
   if (state.scenario !== 'auto') h.set('scn', state.scenario);
   if (state.selected && state.view !== 'globe') h.set('site', state.selected.id);
@@ -852,11 +885,15 @@ async function init() {
       ? 'Could not load the CSV files from a local file. Serve the folder over HTTP, e.g. <code>python -m http.server 8000</code>, then open <code>http://localhost:8000</code>.'
       : `Could not load site data: ${escapeHtml(err.message || err)}`);
   }
-  const { site: siteId, popup: popupId, focus: focusId, globeMode } = readHash();
+  const { site: siteId, popup: popupId, focus: focusId, group: groupId, globeMode } = readHash();
   if (!WEBGL) $('.tab[data-tab="globe"]').hidden = true;
   render();
   const site = siteId && byId(siteId);
   if (site) selectSite(site);
+
+  // #view=globe&group=<group_id>: open a group of close sites (see GROUPS in globe.js)
+  const openGroup = state.view === 'globe' && groupId && globeStage?.groups.find((g) => g.id === groupId);
+  if (openGroup && !focusId) globeStage.openGroup(openGroup, { instant: true });
 
   // #view=globe&focus=<site_id>[&g=compare]: restore the globe state (links, screenshot tests)
   const focusSite = state.view === 'globe' && focusId && byId(focusId);

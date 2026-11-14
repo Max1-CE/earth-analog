@@ -79,7 +79,7 @@ automatically the next time the script runs.
 | Globe fonts | `--font-serif` (headlines), `--font-label` (small caps); Google Fonts link in `index.html` |
 | Animation timing | CSS: `--t-accent` (colour, 0.6 s), `--t-slot` (Earth → target, 1.5 s), `--t-card` (card, 0.6 s); JS: `TIMING` (camera flight 1.2 s, compare 1.5 s, rotation speed) and `ALTITUDE` (camera distance) in `js/globe.js`. With prefers-reduced-motion everything switches instantly |
 | Globe textures | `TEXTURES` in `js/globe.js` (falls back to a plain sphere if a file is missing) |
-| Globe deep links | `#view=globe&focus=<site_id>` (card open), `&g=compare` (comparison) |
+| Globe deep links | `#view=globe&focus=<site_id>` (card open), `&g=compare` (comparison), `#view=globe&group=<id>` (close sites fanned out: arctic, mcmurdo, mistastin, namib — `GROUPS` in `js/globe.js`) |
 | Sidebar content | `renderSidebar()` and helpers in `js/app.js` |
 
 Screenshot tests: headless Chrome with `--force-prefers-reduced-motion` (charts and CSS
