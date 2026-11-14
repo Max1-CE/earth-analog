@@ -1,0 +1,146 @@
+<!doctype html>
+<!--
+  SPDX-FileCopyrightText: 2026 Макс and the Earth Analog team
+  SPDX-License-Identifier: MIT
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Can humans live here? · Earth Analog Explorer</title>
+  <meta name="description" content="Pressure, oxygen, radiation, liquid water, sunlight and gravity on Earth, Mars and the Moon, from the Earth Analog project data.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/style.css?v=202611140931">
+  <!-- Cache-busting version: set by `python tools/bump_version.py` before each push -->
+  <meta name="app-version" content="202611140931">
+</head>
+<body data-theme="earth" data-view="globe" class="ig-page">
+  <header class="app-header">
+    <a class="brand brand--link" href="index.html">
+      <span class="brand__logo" aria-hidden="true"></span>
+      <div>
+        <p class="brand__title">Earth Analog Explorer</p>
+        <p class="brand__subtitle">NASA Space Apps 2026 · Earth Analog</p>
+      </div>
+    </a>
+    <nav class="tabs" aria-label="Pages">
+      <a class="tab" href="index.html">Explorer</a>
+      <a class="tab" href="infographic.html" aria-current="page">Can humans live here?</a>
+    </nav>
+  </header>
+
+  <main class="ig">
+    <div id="ig-status" class="status" hidden></div>
+
+    <!-- 1. Hero -->
+    <article class="ig-card ig-card--wide ig-hero" id="card-hero">
+      <header class="ig-card__head">
+        <div>
+          <p class="kicker">Earth Analog · Infographic</p>
+          <h1 class="display">Can humans <em class="hl hl--earth">live</em> here?</h1>
+          <p class="lede">What Earth gives us for free, and what <em class="hl hl--mars">Mars</em> and <em class="hl hl--moon">the Moon</em> do not. Every number comes from the project data files.</p>
+        </div>
+        <button type="button" class="btn-ghost ig-png" data-png="card-hero">Download PNG</button>
+      </header>
+      <div class="ig-hero__cols" id="hero-cols"></div>
+      <footer class="ig-sources" id="src-hero"></footer>
+    </article>
+
+    <!-- 2. Pressure -->
+    <article class="ig-card" id="card-pressure">
+      <header class="ig-card__head">
+        <div>
+          <p class="kicker kicker--small">Atmosphere</p>
+          <h2 class="ig-card__title">Pressure</h2>
+        </div>
+        <button type="button" class="btn-ghost ig-png" data-png="card-pressure">Download PNG</button>
+      </header>
+      <p class="ig-card__lede">Surface pressure, logarithmic scale. Below the water triple point liquid water cannot exist; below the Armstrong limit a person needs a pressure suit.</p>
+      <div class="ig-chart ig-chart--tall"><canvas id="chart-pressure" role="img" aria-label="Surface pressure on Earth, Mars and the Moon, log scale"></canvas></div>
+      <p class="ig-note" id="note-pressure"></p>
+      <footer class="ig-sources" id="src-pressure"></footer>
+    </article>
+
+    <!-- 3. Radiation -->
+    <article class="ig-card" id="card-radiation">
+      <header class="ig-card__head">
+        <div>
+          <p class="kicker kicker--small">Space weather</p>
+          <h2 class="ig-card__title">Radiation per year</h2>
+        </div>
+        <button type="button" class="btn-ghost ig-png" data-png="card-radiation">Download PNG</button>
+      </header>
+      <p class="ig-card__lede">Surface dose over one Earth year, logarithmic scale. Labels show how many times the Earth dose it is.</p>
+      <div class="ig-chart ig-chart--tall"><canvas id="chart-radiation" role="img" aria-label="Yearly radiation dose on Earth, Mars and the Moon, log scale"></canvas></div>
+      <footer class="ig-sources" id="src-radiation"></footer>
+    </article>
+
+    <!-- 4. Liquid water window -->
+    <article class="ig-card ig-card--wide" id="card-water">
+      <header class="ig-card__head">
+        <div>
+          <p class="kicker kicker--small">Phase diagram</p>
+          <h2 class="ig-card__title">Liquid water window</h2>
+        </div>
+        <button type="button" class="btn-ghost ig-png" data-png="card-water">Download PNG</button>
+      </header>
+      <p class="ig-card__lede">Water is liquid only above the vapour curve and above the triple point (hatched area). Dots: mean surface temperature at each site; lines: its range from minimum to maximum.</p>
+      <div class="ig-chart ig-chart--phase"><canvas id="chart-water" role="img" aria-label="Water phase diagram with the sites plotted by pressure and temperature"></canvas></div>
+      <p class="ig-note" id="note-water"></p>
+      <footer class="ig-sources" id="src-water"></footer>
+    </article>
+
+    <!-- 5. Solar power -->
+    <article class="ig-card ig-card--wide" id="card-solar">
+      <header class="ig-card__head">
+        <div>
+          <p class="kicker kicker--small">Energy</p>
+          <h2 class="ig-card__title">Solar power</h2>
+        </div>
+        <button type="button" class="btn-ghost ig-png" data-png="card-solar">Download PNG</button>
+      </header>
+      <p class="ig-card__lede">Top-of-atmosphere upper bound: sunlight at the highest Sun of the year, before air and dust take their share.</p>
+      <div class="ig-chart" id="solar-box"><canvas id="chart-solar" role="img" aria-label="Maximum solar power at every site, grouped by body"></canvas></div>
+      <footer class="ig-sources" id="src-solar"></footer>
+    </article>
+
+    <!-- 6. Yes / No grid -->
+    <article class="ig-card ig-card--wide" id="card-grid">
+      <header class="ig-card__head">
+        <div>
+          <p class="kicker kicker--small">At a glance</p>
+          <h2 class="ig-card__title">What does the place give you?</h2>
+        </div>
+        <button type="button" class="btn-ghost ig-png" data-png="card-grid">Download PNG</button>
+      </header>
+      <div class="table-scroll"><table class="ig-grid" id="yes-no-grid"></table></div>
+      <footer class="ig-sources" id="src-grid"></footer>
+    </article>
+
+    <!-- 7. Survival kit -->
+    <article class="ig-card ig-card--wide" id="card-kit">
+      <header class="ig-card__head">
+        <div>
+          <p class="kicker kicker--small">Pack list</p>
+          <h2 class="ig-card__title">Survival kit</h2>
+        </div>
+        <button type="button" class="btn-ghost ig-png" data-png="card-kit">Download PNG</button>
+      </header>
+      <p class="ig-card__lede">What Earth provides and you must bring yourself. Texts from the team document «Limits of the analogy».</p>
+      <div class="ig-kit" id="kit-cols"></div>
+      <footer class="ig-sources" id="src-kit"></footer>
+    </article>
+  </main>
+
+  <footer class="app-footer">
+    <span>Values in <em class="ig-uncertain">grey italics</em> have the status estimate or check and are not verified yet. Source data: <code>data/sites.csv</code>, <code>data/habitability.csv</code>, <code>data/habitability_constants.json</code>, <code>data/limits.json</code>.</span>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script type="module" src="js/infographic.js?v=202611140931"></script>
+</body>
+</html>

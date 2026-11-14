@@ -19,6 +19,7 @@ python -m http.server 8000
 ## Structure
 
 ```
+infographic.html      "Can humans live here?" — standalone infographic page (js/infographic.js), linked from the header
 index.html            layout: header + tabs (Globe · Map view · Analysis), globe stage, map panes, Analysis view, sidebar
 css/style.css         themes ([data-theme="earth|mars|moon"]), layout, responsive rules
 js/app.js             state, view switching, theme, sidebar, Analysis view wiring, URL hash
@@ -28,6 +29,7 @@ js/data.js            CSV loading; PARAMS, CRITERIA, SCENARIOS (mirror of metric
 js/scores.js          ScoreBook: queries over scores.csv / ranking.csv; per-criterion breakdown
 js/charts.js          Chart.js charts: ranking, radar, heat map, raw parameters; PNG export
 js/i18n.js            interface language EN / UA: dictionary, t(), language switch
+js/infographic.js     infographic cards (Chart.js) and PNG export (html2canvas); reads only data files
 data/sites.csv        the single source of site data (18 rows: references + Earth analogs)
 data/rock_similarity.csv  rock-class similarity matrix
 data/scores.csv       similarity of every analog with every reference (generated)
@@ -37,6 +39,9 @@ data/limits_uk.json   Ukrainian translation of limits.json (wording from the PDF
 docs/limits_mars.pdf, docs/limits_moon.pdf   Ukrainian originals of the limits documents
 assets/textures/      globe textures (earth, mars, moon; sources in TODO.md)
 analysis/metrics.py   computes scores.csv and ranking.csv from sites.csv
+analysis/habitability.py  liquid-water window, solar power, body constants → data/habitability.csv + habitability_constants.json
+analysis/check_data.py    data consistency checks → CHECKS.md
+data/raw/sites_life_2.xlsx  team source of the life columns (tools/import_life_xlsx.py)
 analysis/CHANGES.md   what the data contains and what is still unverified
 TODO.md               data errors / contradictions found, to be fixed by the team
 tools/bump_version.py cache-busting version for index.html (run before each push)
@@ -48,6 +53,16 @@ The site never computes similarity itself: after editing `data/sites.csv`, run
 ```sh
 python analysis/metrics.py   # rewrites data/scores.csv and data/ranking.csv
 ```
+
+## Before each commit: recompute and check the data
+
+```sh
+python analysis/habitability.py && python analysis/check_data.py
+```
+
+`check_data.py` writes `CHECKS.md` and exits with an error if any check fails. The Moon pressure
+check is a known warning (team decision pending, `TODO.md` section 7), so it stays FAIL until resolved.
+The infographic must not contain data values in HTML/JS: `check_data.py` searches for them.
 
 ## Before each push: bump the version
 

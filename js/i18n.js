@@ -30,6 +30,7 @@ const DICT = {
   'lang.label': { en: 'Language', uk: 'Мова' },
   'tab.globe': { en: 'Globe', uk: 'Глобус' },
   'tab.map': { en: 'Map view', uk: 'Карти' },
+  'nav.infographic': { en: 'Can humans live here?', uk: 'Чи можна тут жити?' },
   'tab.analysis': { en: 'Analysis', uk: 'Аналіз' },
 
   'intro.kicker': { en: 'Earth Analog · NASA Space Apps · 2026', uk: 'Earth Analog · NASA Space Apps · 2026' },

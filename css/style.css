@@ -639,6 +639,7 @@ a.btn { text-decoration: none; display: inline-block; }
   .app-header { position: relative; }
   .tabs { margin-left: 0; }
   .lang-switch { position: absolute; top: 12px; right: 16px; }
+  .nav-link { text-align: center; }
   .brand { padding-right: 96px; }
   .layout { grid-template-columns: minmax(0, 1fr); padding: var(--gap) 16px; }
   .maps { height: 55vh; }
@@ -965,4 +966,106 @@ body[data-view="globe"] .app-footer { color: #8b93a8; }
   .space__hint { position: static; transform: none; text-align: center; margin: 0 16px 16px; }
   .space__details { padding: 8px 16px 40px; }
   .space__details-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ================================================================== */
+/* INFOGRAPHIC — "Can humans live here?" (infographic.html)            */
+/* ================================================================== */
+.brand--link { color: inherit; text-decoration: none; }
+a.tab { text-decoration: none; display: inline-flex; align-items: center; }
+a.tab[aria-current="page"] { background: var(--accent); color: var(--space-1); }
+.nav-link {
+  flex: none; padding: 8px 14px; border-radius: 999px; text-decoration: none; white-space: nowrap;
+  font-weight: 600; font-size: 0.85rem; color: var(--c-muted); border: 1px solid var(--c-border);
+}
+.nav-link:hover { color: var(--c-text); border-color: var(--c-accent); }
+body[data-view="globe"] .nav-link { font-family: var(--font-label); letter-spacing: 0.06em; color: #e6eaf4; border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+
+.ig-page { color: #e6eaf4; }
+.ig {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px;
+  padding: 24px 4vw 48px; max-width: 1400px; margin: 0 auto;
+}
+.ig-card {
+  min-width: 0; padding: 22px; border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(63, 193, 217, 0.22); /* --accent-earth at 22 %; html2canvas cannot parse color-mix() */
+  display: flex; flex-direction: column; gap: 12px;
+}
+.ig-card--wide { grid-column: 1 / -1; }
+.ig-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.ig-card__head .kicker { margin: 0 0 6px; }
+.ig .kicker:not(.kicker--small) { color: #79d4e4; } /* = color-mix(--accent-earth 70%, #fff); html2canvas cannot parse color-mix() */
+.ig-card__title { margin: 0; font-family: var(--font-serif); font-weight: 400; font-size: clamp(1.6rem, 2.4vw, 2.2rem); line-height: 1.05; }
+.ig-card__lede { margin: 0; color: var(--space-text); font-size: 0.92rem; max-width: 46rem; }
+.ig-hero .display { margin: 0; }
+.ig-hero .lede { max-width: 40rem; }
+.ig-png { flex: none; }
+.ig-chart { position: relative; height: 320px; }
+.ig-chart--tall { height: 380px; }
+.ig-chart--phase { height: 460px; }
+.ig-note { margin: 0; font-size: 0.85rem; color: var(--space-text); }
+.ig-note code, .ig-sources code { font-size: 0.8em; }
+.ig-sources {
+  margin-top: auto; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.07);
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px;
+  font-size: 0.7rem; color: #8b93a8;
+}
+.ig-sources__st { display: inline-flex; gap: 6px; align-items: center; }
+.ig-uncertain { color: #9aa3b8 !important; font-style: italic; }
+.ig-st {
+  display: inline-block; padding: 1px 7px; border-radius: 999px;
+  font-family: var(--font-label); font-size: 0.62rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.ig-st--literature { color: #6fcf97; }
+.ig-st--computed { color: #6aa9ff; }
+.ig-st--estimate, .ig-st--check { color: #9aa3b8; font-style: italic; }
+
+/* Hero: three bodies side by side */
+.ig-hero__cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.ig-body {
+  padding: 16px 18px; border-radius: 14px; background: rgba(5, 7, 26, 0.45);
+  border-top: 3px solid var(--body);
+}
+.ig-body__name { margin: 0 0 10px; font-family: var(--font-serif); font-weight: 400; font-size: 1.9rem; color: var(--body); }
+.ig-stats { margin: 0; display: grid; gap: 12px; }
+.ig-stats dt { font-family: var(--font-label); font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase; color: #9aa3b8; }
+.ig-stats dd { margin: 2px 0 0; font-family: var(--font-serif); font-size: 1.7rem; line-height: 1.1; color: #f3f5fb; }
+.ig-stats__note { margin: 2px 0 0; font-size: 0.75rem; color: #9aa3b8; }
+
+/* Yes / No grid */
+.ig-grid { width: 100%; min-width: 560px; border-collapse: separate; border-spacing: 0 6px; }
+.ig-grid th { text-align: left; font-weight: 600; padding: 4px 10px; }
+.ig-grid thead th { font-family: var(--font-serif); font-weight: 400; font-size: 1.5rem; }
+.ig-grid tbody th { font-family: var(--font-label); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: #c4cad8; white-space: nowrap; }
+.ig-cell { padding: 8px 10px; background: rgba(5, 7, 26, 0.45); vertical-align: middle; }
+.ig-cell__icon {
+  display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 8px; border-radius: 50%;
+  font-weight: 700; font-size: 0.85rem; vertical-align: middle;
+}
+.ig-cell__text { font-size: 0.85rem; vertical-align: middle; }
+.ig-cell--good .ig-cell__icon { background: rgba(111, 207, 151, 0.18); color: #6fcf97; }
+.ig-cell--bad .ig-cell__icon { background: rgba(255, 107, 107, 0.18); color: #ff8a8a; }
+.ig-cell--partial .ig-cell__icon { background: rgba(240, 198, 116, 0.18); color: #f0c674; }
+.ig-cell--unknown .ig-cell__icon { background: rgba(154, 163, 184, 0.18); color: #9aa3b8; }
+
+/* Survival kit */
+.ig-kit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.ig-kit__col { padding: 16px 18px; border-radius: 14px; background: rgba(5, 7, 26, 0.45); border-top: 3px solid var(--body); }
+.ig-kit__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.ig-kit__item { padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 0.85rem; }
+.ig-kit__item h4 { margin: 0 0 6px; font-family: var(--font-label); font-size: 0.76rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--body); }
+.ig-kit__item p { margin: 0 0 4px; }
+.ig-kit__lbl { display: inline-block; min-width: 3.4em; font-family: var(--font-label); font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: #9aa3b8; }
+.ig-kit__why { color: var(--space-text); }
+.ig-kit__methods { margin: 6px 0 0; padding-left: 18px; color: #c4cad8; }
+.ig-kit__muted { color: #8b93a8; font-style: italic; }
+
+@media (max-width: 900px) {
+  .ig { grid-template-columns: minmax(0, 1fr); padding: 16px 16px 40px; }
+  .ig-hero__cols, .ig-kit { grid-template-columns: minmax(0, 1fr); }
+  .ig-card { padding: 16px; }
+  .ig-card__head { flex-direction: column; }
+  .ig-chart--phase { height: 380px; }
 }
