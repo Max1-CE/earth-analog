@@ -36,6 +36,7 @@ const state = {
   closeGap: null,        // site_id of the analog shown in the "Close the gap" module
   gapOn: null,           // Set of intervention_ids switched on in the module
   gapMode: 'list',       // 'list' | 'chart' (bar charts), kept in the hash as &view=chart
+  gapFrom: 'map',        // where the module was opened: 'map' (popup / sidebar) or 'globe' (site card)
   limitsByLang: {},       // {en: data/limits.json, uk: data/limits_uk.json}; either may be missing
   selected: null,         // Site shown in the sidebar
   referenceId: null,      // reference used for the selected analog (null = its pair)
@@ -684,6 +685,7 @@ function globeCardHtml(site, group = null) {
     <div class="site-card__actions">
       ${ref ? `<button type="button" class="btn-accent" data-gaction="compare">${escapeHtml(t(`gl.compare.${ref.body}`))}</button>` : ''}
       <button type="button" class="btn-ghost" data-gaction="map">${escapeHtml(t('gl.openMap'))}</button>
+      ${state.whatIf ? gapButtonHtml(site) : ''}
     </div>`;
 }
 
@@ -761,6 +763,8 @@ function bindEvents() {
   }));
   $('#globe-back').addEventListener('click', () => globeStage?.back());
   $('#globe-card').addEventListener('click', (e) => {
+    const gap = e.target.closest('[data-action="close-gap"]');
+    if (gap) { openCloseGap(gap.dataset.site, { from: 'globe' }); return; }
     const a = e.target.closest('[data-gaction]');
     if (!a || !globeStage) return;
     if (a.dataset.gaction === 'pick') {
@@ -836,6 +840,7 @@ function bindEvents() {
   cg.addEventListener('click', (e) => {
     const b = e.target.closest('[data-cg]');
     if (b?.dataset.cg === 'reset') { state.gapOn = null; drawGap(true); }
+    if (b?.dataset.cg === 'png') exportGapPng(b);
     const mode = e.target.closest('[data-cg-mode]');
     if (mode && mode.dataset.cgMode !== state.gapMode) { state.gapMode = mode.dataset.cgMode; drawGap(false); writeHash(); }
     if (b?.dataset.cg === 'back') closeCloseGap({ toSite: true });
@@ -933,16 +938,17 @@ function drawGap(animate) {
   if (!state.gapOn) state.gapOn = new Set(model.defaultOn); // default solution (also after Reset)
   const el = $('#close-gap');
   destroyGapCharts();
-  el.innerHTML = renderGap(model, state.gapOn, { limits: limitsData(), fmtCoords: formatCoords, mode: state.gapMode });
+  el.innerHTML = renderGap(model, state.gapOn, { limits: limitsData(), fmtCoords: formatCoords, mode: state.gapMode, backTo: state.gapFrom });
   animateGap(el, !animate || prefersReducedMotion());
   if (state.gapMode === 'chart') {
     requestAnimationFrame(() => drawGapCharts(el, model, state.gapOn, { reduced: !animate || prefersReducedMotion(), threshold: MITIGATION_THRESHOLD }));
   }
 }
 
-function openCloseGap(siteId, { instant = false } = {}) {
+function openCloseGap(siteId, { instant = false, from = 'map' } = {}) {
   const site = byId(siteId);
   if (!site || !site.analog_of || !state.whatIf || !gapModel(site, byId(site.pairId), state.whatIf)) return;
+  state.gapFrom = from === 'globe' && state.view === 'globe' ? 'globe' : 'map';
   state.closeGap = site.id;
   state.gapOn = null;
   const el = $('#close-gap');
@@ -954,6 +960,33 @@ function openCloseGap(siteId, { instant = false } = {}) {
   writeHash();
 }
 
+/** The whole module (list or charts) as a PNG for slides; control buttons are left out. */
+async function exportGapPng(button) {
+  const panel = $('#close-gap .cg__panel');
+  if (!panel || !window.html2canvas) return;
+  button.disabled = true;
+  // redraw the charts at 2× first: html2canvas copies canvases pixel for pixel, so 1× charts come out blurry
+  const charts = [...panel.querySelectorAll('canvas')].map((c) => window.Chart?.getChart(c)).filter(Boolean);
+  const setRatio = (r) => charts.forEach((ch) => { ch.options.devicePixelRatio = r; ch.resize(); });
+  setRatio(2);
+  try {
+    const canvas = await window.html2canvas(panel, {
+      backgroundColor: getComputedStyle(panel).backgroundColor,
+      scale: 2,
+      ignoreElements: (el) => el.classList?.contains('cg__actions'),
+    });
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `close-the-gap-${state.closeGap}${state.gapMode === 'chart' ? '-charts' : ''}-${getLang()}.png`;
+    a.click();
+  } catch (err) {
+    console.error('[close-gap] PNG export failed', err);
+  } finally {
+    setRatio(undefined); // back to the screen's own pixel ratio
+    button.disabled = false;
+  }
+}
+
 function closeCloseGap({ toSite = false } = {}) {
   const site = byId(state.closeGap);
   const el = $('#close-gap');
@@ -963,7 +996,11 @@ function closeCloseGap({ toSite = false } = {}) {
   setTimeout(() => { if (!state.closeGap) { el.hidden = true; el.innerHTML = ''; } }, prefersReducedMotion() ? 0 : 300);
   state.closeGap = null;
   state.gapOn = null;
-  if (toSite && site) {
+  if (toSite && site && state.gapFrom === 'globe' && state.view === 'globe') {
+    // opened from the globe card: the globe (and its focused site) is still underneath
+    state.gapFrom = 'map';
+    writeHash();
+  } else if (toSite && site) {
     // "Back": to the point on the Earth map, details open
     state.view = 'earth';
     render();

@@ -90,6 +90,7 @@ const DICT = {
   'gap.ref': { en: 'target: {body}', uk: 'ціль: {body}' },
   'gap.reset': { en: 'Reset', uk: 'Скинути' },
   'gap.back': { en: '← Back to the map', uk: '← Назад до карти' },
+  'gap.backGlobe': { en: '← Back to the globe', uk: '← Назад до глобуса' },
   'gap.similarity': { en: 'Similarity', uk: 'Схожість' },
   'gap.barAria': { en: 'Similarity {a} → {b}', uk: 'Схожість {a} → {b}' },
   'gap.already': { en: 'Already a close analog — no field changes needed.', uk: 'Уже близький аналог — польові зміни не потрібні.' },

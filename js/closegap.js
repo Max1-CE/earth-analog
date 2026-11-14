@@ -88,7 +88,7 @@ function summary(model, on, limits) {
 }
 
 /** Full module HTML for the current toggle state. */
-export function renderGap(model, on, { limits, fmtCoords, mode = 'list' }) {
+export function renderGap(model, on, { limits, fmtCoords, mode = 'list', backTo = 'map' }) {
   const { site, ref, def, ivs } = model;
   const target = site.analog_of;
   const before = num(def.score_before);
@@ -170,8 +170,9 @@ export function renderGap(model, on, { limits, fmtCoords, mode = 'list' }) {
             <button type="button" class="segmented__btn" data-cg-mode="list" aria-pressed="${mode === 'list'}">${esc(t('gap.mode.list'))}</button>
             <button type="button" class="segmented__btn" data-cg-mode="chart" aria-pressed="${mode === 'chart'}">${esc(t('gap.mode.chart'))}</button>
           </div>
+          <button type="button" class="btn" data-cg="png">${esc(t('btn.png'))}</button>
           <button type="button" class="btn" data-cg="reset">${esc(t('gap.reset'))}</button>
-          <button type="button" class="btn btn--primary" data-cg="back">${esc(t('gap.back'))}</button>
+          <button type="button" class="btn btn--primary" data-cg="back">${esc(t(backTo === 'globe' ? 'gap.backGlobe' : 'gap.back'))}</button>
         </div>
       </header>
 

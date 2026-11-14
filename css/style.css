@@ -1148,7 +1148,7 @@ body.cg-open { overflow: hidden; }
 .cg-toggle { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .cg-switch { flex: none; position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--c-bg); border: 1px solid var(--c-border); transition: background 0.2s; }
 .cg-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--c-muted); transition: transform 0.2s, background 0.2s; }
-.cg-toggle:checked + .cg-switch { background: color-mix(in srgb, var(--c-accent) 35%, transparent); border-color: var(--c-accent); }
+.cg-toggle:checked + .cg-switch { background: var(--c-surface); border-color: var(--c-accent); } /* no color-mix(): PNG export (html2canvas) */
 .cg-toggle:checked + .cg-switch::after { transform: translateX(14px); background: var(--c-accent); }
 .cg-toggle:focus-visible + .cg-switch { outline: 2px solid var(--c-accent); outline-offset: 2px; }
 .cg-iv__name { flex: 1; min-width: 0; font-weight: 600; }
@@ -1204,3 +1204,6 @@ body.cg-open { overflow: hidden; }
   .cg-mode { width: 100%; }
   .cg-mode .segmented__btn { flex: 1; }
 }
+
+/* ---------- Close the gap entry on the globe site card ---------- */
+.site-card__actions .btn-gap { margin-top: 2px; }
