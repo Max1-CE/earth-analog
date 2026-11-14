@@ -188,7 +188,7 @@ function normalizeSite(row, index) {
   const values = {};
   for (const p of PARAMS) values[p.key] = p.text ? (str(row[p.key]) || null) : toNumber(row[p.key]);
   const status = {};
-  for (const [k, v] of Object.entries(row)) if (k.startsWith('status_') && str(v)) status[k.slice(7)] = str(v);
+  for (const [k, v] of Object.entries(row)) if (k.startsWith('status_') && k !== 'status_life' && str(v)) status[k.slice(7)] = str(v); // status_life: habitability, not a value badge
 
   return {
     id,
